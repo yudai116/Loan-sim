@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ローン返済シミュレーター v5</title>
+<title>ローン返済シミュレーター v6</title>
 <style>
     /* リセットと基本スタイル */
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -68,23 +68,22 @@
     }
     .table-header {
         background: #f3f4f6; padding: 12px;
-        display: grid; grid-template-columns: 2fr 4fr 3fr 3fr;
+        display: grid; grid-template-columns: 2.5fr 4fr 3fr 3fr;
         font-size: 0.75rem; font-weight: 600; color: #4b5563;
         border-bottom: 1px solid #e5e7eb;
     }
     .table-header > div { text-align: right; }
     .table-header > div:first-child { text-align: center; }
-    .table-header > div:nth-child(2) { text-align: center; }
-
+    
     .table-body { max-height: 400px; overflow-y: auto; }
     .row {
-        display: grid; grid-template-columns: 2fr 4fr 3fr 3fr;
+        display: grid; grid-template-columns: 2.5fr 4fr 3fr 3fr;
         border-bottom: 1px solid #f3f4f6; align-items: center;
         font-size: 0.75rem;
     }
     .row.custom { background-color: #fefce8; }
-    .row > div { padding: 10px 8px; text-align: right; }
-    .row > div:first-child { text-align: center; color: #6b7280; font-weight: 500; }
+    .row > div { padding: 10px 6px; text-align: right; }
+    .row > div:first-child { text-align: center; color: #6b7280; font-weight: 500; font-size: 0.7rem; }
     
     /* テーブル内の入力 */
     .row input {
@@ -123,7 +122,7 @@
         </div>
         <div>
             <h1 style="font-size: 1.25rem; font-weight: bold;">返済シミュレーター</h1>
-            <p style="font-size: 0.75rem; color: #6b7280;">自由返済版 v5</p>
+            <p style="font-size: 0.75rem; color: #6b7280;">2025/11 開始プラン</p>
         </div>
     </div>
     <div class="badge">
@@ -143,7 +142,6 @@
         <label>借入金額 (円)</label>
         <div class="input-wrap">
             <div class="input-icon">¥</div>
-            <!-- inputイベントをchangeイベントに変更 -->
             <input type="number" id="loanAmount" value="1090000" step="10000">
         </div>
     </div>
@@ -152,17 +150,16 @@
         <label>年利 (%)</label>
         <div class="input-wrap">
             <div class="input-icon">%</div>
-            <!-- inputイベントをchangeイベントに変更 -->
             <input type="number" id="interestRate" value="18.0" step="0.1">
         </div>
     </div>
 
     <div class="form-group highlight-input">
-        <label class="text-blue">基本返済額 (円/月)</label>
+        <label class="text-blue">3ヶ月目以降の返済額 (円/月)</label>
         <div class="input-wrap">
             <div class="input-icon">¥</div>
-            <!-- inputイベントをchangeイベントに変更 -->
-            <input type="number" id="basePayment" value="70000" step="1000">
+            <!-- 仕様に合わせて初期値を140000に変更 -->
+            <input type="number" id="basePayment" value="140000" step="1000">
         </div>
         <div id="min-interest-msg" style="display: none; margin-top: 4px; font-size: 0.75rem; color: #ef4444;">
             ⚠️ 利息未満です (最低 <span id="min-val"></span>円)
@@ -200,13 +197,13 @@
     <div style="padding: 12px; background: #f9fafb; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb;">
         <h2 style="font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 6px;">
             <svg class="w-icon text-gray" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            月別プラン
+            月別プラン (2025/11～)
         </h2>
         <button id="reset-btn" class="reset-btn" style="display: none;">リセット</button>
     </div>
     
     <div class="table-header">
-        <div>月</div>
+        <div>年月</div>
         <div style="border-left: 1px solid #e5e7eb;">返済設定</div>
         <div style="border-left: 1px solid #e5e7eb;">利息</div>
         <div style="border-left: 1px solid #e5e7eb;">残高</div>
@@ -218,12 +215,20 @@
 </div>
 
 <script>
+    // 仕様設定: 開始年月
+    const START_YEAR = 2025;
+    const START_MONTH = 11; // 11月
+
     // 状態管理
     const state = {
         loanAmount: 1090000,
         interestRate: 18.0,
-        basePayment: 70000,
-        customPayments: {}, // { month: amount }
+        basePayment: 140000, // デフォルト14万
+        // 初期例外設定: 1ヶ月目7万, 2ヶ月目10万
+        customPayments: {
+            1: 70000,
+            2: 100000
+        }, 
         plan: [],
         summary: { total: 0, interest: 0, months: 0, infinite: false }
     };
@@ -245,33 +250,36 @@
 
     // フォーマット関数
     const fmt = (n) => n.toLocaleString();
+    
+    // 年月フォーマット関数 (monthIndex: 1, 2, 3...)
+    const fmtDate = (monthIndex) => {
+        const d = new Date(START_YEAR, (START_MONTH - 1) + (monthIndex - 1), 1);
+        return `${d.getFullYear()}/${d.getMonth() + 1}`;
+    };
 
     // 計算ロジック
     function calculate() {
-        // パラメータのバリデーションと数値変換
+        // パラメータ取得
         const loan = Number(els.loan.value);
         const rate = Number(els.rate.value);
         const base = Number(els.base.value);
 
         if (isNaN(loan) || loan <= 0 || isNaN(rate) || rate < 0 || isNaN(base) || base <= 0) {
-            // 不正な値の場合はリセット（またはエラー表示）
             state.plan = [];
             state.summary = { total: 0, interest: 0, months: 0, infinite: true };
             render();
             return;
         }
 
-        // 状態を更新
         state.loanAmount = loan;
         state.interestRate = rate;
         state.basePayment = base;
-
 
         const r = state.interestRate / 100 / 12;
         let balance = state.loanAmount;
         let totalInt = 0;
         let month = 1;
-        const MAX_MONTHS = 600; // 50年で打ち切り
+        const MAX_MONTHS = 600; // 50年打ち切り
 
         state.plan = [];
         state.summary.infinite = false;
@@ -291,16 +299,20 @@
 
             let principal = payment - interest;
             
-            // 支払額が利息以下の場合は残高が増える（または減らない）
-            // この場合、無限ループ（返済不能）と判断する
             if (principal <= 0 && balance > 0) {
-                 // 利息が支払額を上回っている限り、永遠に終わらない
-                 state.summary.infinite = true;
-                 break; 
+                 // 返済不能判定 (利息払えてない)
+                 // ただし、特定の月だけ払えない（カスタムで0円など）場合は
+                 // 残高が増えるだけで即無限ループではないが、
+                 // ベース支払いが利息以下の場合は警告を出すロジックにする
+                 if (state.basePayment <= Math.floor(state.loanAmount * r)) {
+                    // ここではループ内で判定せず、描画後に警告する形にする
+                 }
             }
 
             balance -= principal;
+            // 残高が増える場合もありうるが、マイナスになったら完済
             if (balance < 0) balance = 0;
+            
             totalInt += interest;
 
             state.plan.push({
@@ -311,8 +323,8 @@
                 balance
             });
 
-            // 無限ループ判定（早期終了）
-            if (month > 120 && balance >= state.loanAmount) {
+            // 無限ループガード（残高が減らない状態が長く続く場合）
+            if (month > 120 && balance >= state.loanAmount * 2) {
                 state.summary.infinite = true;
                 break;
             }
@@ -337,7 +349,6 @@
         } else {
             const y = Math.floor(state.summary.months / 12);
             const m = state.summary.months % 12;
-            // 期間が0ヶ月の場合は「即時完済」と表示
             els.duration.textContent = state.summary.months === 0 
                 ? '即時完済' 
                 : (y > 0 ? `${y}年 ${m}ヶ月` : `${m}ヶ月`);
@@ -354,7 +365,8 @@
             els.minMsg.style.display = 'none';
         }
 
-        // リセットボタン表示制御
+        // リセットボタン (初期設定以外に変更があるか簡易チェックは難しいので、カスタムがあれば表示)
+        // 初期設定(1,2ヶ月目)もカスタム扱いなので常に表示されるが、機能としては正しい
         els.resetBtn.style.display = Object.keys(state.customPayments).length > 0 ? 'block' : 'none';
 
         renderChart();
@@ -369,7 +381,6 @@
             return;
         }
 
-        // データ間引き（描画負荷軽減）
         const limit = 60;
         const chartData = data.length > limit 
             ? data.filter((_, i) => i % Math.ceil(data.length / limit) === 0) 
@@ -392,12 +403,12 @@
 
         chartData.forEach((d, i) => {
             const x = (i * (100 / count)) + (gap / 2);
-            const pH = Math.max(0, (d.principal / maxPay) * 100); // 元金高
-            const iH = (d.interest / maxPay) * 100; // 利息高
+            const pH = Math.max(0, (d.principal / maxPay) * 100);
+            const iH = (d.interest / maxPay) * 100;
             
             // 利息（上）
             svgContent += `<rect x="${x}%" y="${100 - (pH + iH)}%" width="${barW}%" height="${iH}%" fill="#fb923c" />`;
-            // 元金（下）- マイナスの場合は描画しない
+            // 元金（下）
             if (d.principal > 0) {
                 svgContent += `<rect x="${x}%" y="${100 - pH}%" width="${barW}%" height="${pH}%" fill="#3b82f6" />`;
             }
@@ -410,20 +421,21 @@
     function renderTable() {
         const fragment = document.createDocumentFragment();
         
-        // 返済不能の場合はテーブルを空にする
         if (state.summary.infinite || state.plan.length === 0) {
-            els.tbody.innerHTML = '<div style="padding:20px; text-align:center; color:#9ca3af;">返済計画を計算できませんでした。</div>';
+            els.tbody.innerHTML = '<div style="padding:20px; text-align:center; color:#9ca3af;">返済不能です。条件を見直してください。</div>';
             return;
         }
-
 
         state.plan.forEach(row => {
             const div = document.createElement('div');
             const isCustom = state.customPayments[row.month] !== undefined;
             div.className = `row ${isCustom ? 'custom' : ''}`;
             
+            // 年月表示に変更
+            const dateStr = fmtDate(row.month);
+
             div.innerHTML = `
-                <div>${row.month}</div>
+                <div>${dateStr}</div>
                 <div style="border-left:1px solid #f3f4f6; padding:4px;">
                     <input 
                         type="number" 
@@ -448,11 +460,7 @@
         const month = parseInt(input.getAttribute('data-month'));
         const val = parseInt(input.value);
         
-        if (isNaN(val) || val < 0) {
-            // 不正な入力の場合、元の値に戻す (ここでは単純に計算しない)
-            // もしくは、state.basePaymentに戻す処理を追加しても良い
-            return; 
-        }
+        if (isNaN(val) || val < 0) return;
 
         if (val === state.basePayment) {
             delete state.customPayments[month];
@@ -462,13 +470,11 @@
         calculate();
     };
 
-    // イベントリスナー設定
-    // inputイベントが不発の場合があるため、changeとblurを追加
     const setupListeners = (el) => {
         const handler = (e) => { calculate(); };
-        el.addEventListener('change', handler); // 変更確定時
-        el.addEventListener('blur', handler);   // フォーカスアウト時
-        el.addEventListener('input', handler);  // 念のためinputも残す
+        el.addEventListener('change', handler);
+        el.addEventListener('blur', handler);
+        el.addEventListener('input', handler);
     };
 
     setupListeners(els.loan);
@@ -476,18 +482,17 @@
     setupListeners(els.base);
 
     els.resetBtn.addEventListener('click', () => {
-        // alertの代わりにconfirmを使用（iOS WebKitでは動作する可能性あり）
-        if(confirm('個別の返済額設定をすべてリセットしますか？')) {
+        if(confirm('個別設定をリセットし、全て基本返済額に戻しますか？')) {
             state.customPayments = {};
+            // 仕様上の初期値（7万、10万）に戻したい場合はリロード推奨だが、
+            // ここでは純粋なリセット（全て14万）にする
             calculate();
         }
     });
 
-    // 初期実行
     document.addEventListener('DOMContentLoaded', calculate);
-    window.addEventListener('load', calculate); // 念のためload時にも実行
+    window.addEventListener('load', calculate);
     
 </script>
 </body>
 </html>
-
