@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ローン返済シミュレーター v6</title>
+<title>ローン返済シミュレーター v7</title>
 <style>
     /* リセットと基本スタイル */
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -221,13 +221,13 @@
 
     // 状態管理
     const state = {
-        loanAmount: 1077623,
+        loanAmount: 1067900,
         interestRate: 18.0,
         basePayment: 140000, // デフォルト14万
         // 初期例外設定: 1ヶ月目7万, 2ヶ月目10万
         customPayments: {
-            1: 70000,
-            2: 100000
+            1: 60000,
+            2: 165000
         }, 
         plan: [],
         summary: { total: 0, interest: 0, months: 0, infinite: false }
