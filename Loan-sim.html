@@ -461,90 +461,26 @@ input[type="number"]:focus, input[type="date"]:focus {
     <div class="legend-item"><span class="dot" style="background: #fed7aa;"></span> 利息（予測）</div>
 </div>
 <div style="margin-top: 12px; padding: 12px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
-    <p style="font-size: 0.75rem; color: #1e40af; font-weight: 600; margin-bottom: 4px;">📊 月平均返済額</p>
-    <p id="avg-payment" style="font-size: 1.25rem; font-weight: bold; color: #1e3a8a;">¥--</p>
-</div>
-
-
-</div>
-
-<!-- 返済シミュレーション -->
-
-<div class="card">
-    <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-        <svg class="w-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: #22c55e;">
-            <path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-        </svg>
-        返済シミュレーション
-    </h2>
-    <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 16px;">次回の返済で残高がどう変わるかシミュレート</p>
-
-
-<div class="simulation-box">
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-        <div class="form-group" style="margin-bottom: 0;">
-            <label>返済予定日</label>
-            <div class="input-wrap">
-                <div class="input-icon">📅</div>
-                <input type="date" id="sim-date" style="padding-left: 36px;">
-            </div>
+    <label style="font-size: 0.75rem; color: #1e40af; font-weight: 600; margin-bottom: 4px; display: block;">📊 月平均返済額</label>
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <div style="position: relative; flex: 1;">
+            <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #1e3a8a; font-weight: 600;">¥</span>
+            <input 
+                type="number" 
+                id="avg-payment-input" 
+                style="width: 100%; padding: 8px 8px 8px 24px; border: 2px solid #3b82f6; border-radius: 6px; font-size: 1.125rem; font-weight: bold; color: #1e3a8a;"
+                step="1000"
+                onchange="updateAvgPayment()"
+            >
         </div>
-        <div class="form-group" style="margin-bottom: 0;">
-            <label>返済金額 (円)</label>
-            <div class="input-wrap">
-                <div class="input-icon">¥</div>
-                <input type="number" id="sim-amount" placeholder="100000" step="1000">
-            </div>
-        </div>
-    </div>
-    
-    <button class="btn-primary" onclick="simulatePayment()">
-        💡 シミュレーション実行
-    </button>
-    
-    <div id="simulation-result" style="display: none;" class="simulation-result">
-        <h3 style="font-size: 0.875rem; font-weight: 600; color: #166534; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-            <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            シミュレーション結果
-        </h3>
-        
-        <div class="impact-item">
-            <span class="impact-label">返済前残高</span>
-            <span class="impact-value" id="sim-balance-before">¥--</span>
-        </div>
-        
-        <div class="impact-item">
-            <span class="impact-label">発生利息（<span id="sim-days">--</span>日分）</span>
-            <span class="impact-value" id="sim-interest">¥--</span>
-        </div>
-        
-        <div class="impact-item">
-            <span class="impact-label">元金返済額</span>
-            <span class="impact-value positive" id="sim-principal">¥--</span>
-        </div>
-        
-        <div class="impact-item" style="background: #f0fdf4; margin: 8px -16px 0; padding: 12px 16px; border-radius: 6px;">
-            <span class="impact-label" style="font-weight: 600;">返済後残高</span>
-            <span class="impact-value" style="font-size: 1.5rem; color: #15803d;" id="sim-balance-after">¥--</span>
-        </div>
-        
-        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #bbf7d0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span style="font-size: 0.75rem; color: #166534;">残高減少額</span>
-                <span style="font-size: 1rem; font-weight: bold; color: #16a34a;" id="sim-reduction">¥--</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.75rem; color: #166534;">新しい完済予定</span>
-                <span style="font-size: 0.875rem; font-weight: 600; color: #15803d;" id="sim-new-completion">--</span>
-            </div>
-        </div>
-        
-        <button class="btn-secondary" onclick="clearSimulation()" style="width: 100%; margin-top: 12px;">
-            ✕ クリア
+        <button 
+            onclick="resetAvgPayment()" 
+            style="padding: 8px 12px; background: white; border: 1px solid #3b82f6; color: #3b82f6; border-radius: 6px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;"
+        >
+            自動計算
         </button>
     </div>
+    <p style="font-size: 0.65rem; color: #1e40af; margin-top: 4px; opacity: 0.8;">※ 手動で変更可能。「自動計算」で実績平均に戻ります</p>
 </div>
 
 
@@ -554,10 +490,13 @@ input[type="number"]:focus, input[type="date"]:focus {
 
 <div class="table-container">
     <div style="padding: 12px; background: #f9fafb; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb;">
-        <h2 style="font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-            <svg class="w-icon text-gray" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            返済実績
-        </h2>
+        <div>
+            <h2 style="font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                <svg class="w-icon text-gray" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                返済実績
+            </h2>
+            <p style="font-size: 0.65rem; color: #9ca3af; margin-top: 4px;">※ 1〜5日の返済は前月分として集計</p>
+        </div>
     </div>
 
 
@@ -570,6 +509,29 @@ input[type="number"]:focus, input[type="date"]:focus {
 </div>
 
 <div id="table-body" class="table-body">
+</div>
+
+<!-- 返済予定追加フォーム -->
+<div style="padding: 16px; background: #f0fdf4; border-top: 2px solid #86efac;">
+    <h3 style="font-size: 0.875rem; font-weight: 600; color: #166534; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+        <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M12 4v16m8-8H4"/>
+        </svg>
+        返済予定を追加
+    </h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end;">
+        <div>
+            <label style="font-size: 0.7rem; color: #166534; font-weight: 600; display: block; margin-bottom: 4px;">返済予定日</label>
+            <input type="date" id="new-payment-date" style="width: 100%; padding: 8px; border: 1px solid #86efac; border-radius: 6px; font-size: 0.875rem;">
+        </div>
+        <div>
+            <label style="font-size: 0.7rem; color: #166534; font-weight: 600; display: block; margin-bottom: 4px;">返済金額 (円)</label>
+            <input type="number" id="new-payment-amount" placeholder="100000" step="1000" style="width: 100%; padding: 8px; border: 1px solid #86efac; border-radius: 6px; font-size: 0.875rem;">
+        </div>
+        <button onclick="addPaymentPlan()" style="padding: 10px 16px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
+            ➕ 追加
+        </button>
+    </div>
 </div>
 
 
@@ -606,6 +568,8 @@ input[type="number"]:focus, input[type="date"]:focus {
         baseDate: BASE_DATE,
         interestRate: INTEREST_RATE,
         paymentHistory: paymentHistory,
+        plannedPayments: [], // 返済予定リスト
+        customAvgPayment: null, // カスタム平均返済額（null = 自動計算）
         plan: [],
         summary: { total: 0, interest: 0, payments: 0 }
     };
@@ -623,7 +587,7 @@ input[type="number"]:focus, input[type="date"]:focus {
         principalRemaining: document.getElementById('principal-remaining'),
         totalPay: document.getElementById('total-payment'),
         totalInt: document.getElementById('total-interest'),
-        avgPayment: document.getElementById('avg-payment'),
+        avgPaymentInput: document.getElementById('avg-payment-input'),
         combinedChart: document.getElementById('combined-chart'),
         combinedLabels: document.getElementById('combined-labels'),
         tbody: document.getElementById('table-body')
@@ -816,25 +780,49 @@ input[type="number"]:focus, input[type="date"]:focus {
     
     // 将来予測を計算（月平均返済額で返済を続けた場合）
     function calculateForecast() {
-        // 月ごとに集計して平均を算出
+        // 2025/11から前月までの返済を集計（1-5日は前月扱い）
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // 前月の最終日を取得
+        const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+        
         const monthlyData = {};
         state.plan.forEach(row => {
-            const monthKey = `${row.date.getFullYear()}-${String(row.date.getMonth() + 1).padStart(2, '0')}`;
-            if (!monthlyData[monthKey]) {
-                monthlyData[monthKey] = 0;
+            const date = new Date(row.date);
+            const day = date.getDate();
+            
+            // 1-5日の場合は前月として扱う
+            let displayDate = new Date(date);
+            if (day >= 1 && day <= 5) {
+                displayDate.setMonth(displayDate.getMonth() - 1);
             }
-            monthlyData[monthKey] += row.payment;
+            
+            // 前月までのデータのみを集計
+            if (displayDate <= lastMonth) {
+                const monthKey = `${displayDate.getFullYear()}-${String(displayDate.getMonth() + 1).padStart(2, '0')}`;
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = 0;
+                }
+                monthlyData[monthKey] += row.payment;
+            }
         });
         
         const monthlyPayments = Object.values(monthlyData);
-        const avgMonthlyPayment = monthlyPayments.reduce((sum, p) => sum + p, 0) / monthlyPayments.length;
+        
+        // 自動計算の月平均
+        const calculatedAvgPayment = monthlyPayments.length > 0
+            ? monthlyPayments.reduce((sum, p) => sum + p, 0) / monthlyPayments.length
+            : 0;
+        
+        // カスタム値があればそれを使用、なければ自動計算値
+        const avgMonthlyPayment = state.customAvgPayment !== null 
+            ? state.customAvgPayment 
+            : calculatedAvgPayment;
         
         // 現在の残高から開始
         const todayData = calculateTodayBalance();
         let balance = todayData.balance;
-        
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
         
         // 最後の返済日を取得
         const lastPaymentDate = state.plan.length > 0 
@@ -915,8 +903,8 @@ input[type="number"]:focus, input[type="date"]:focus {
         // 将来予測を計算
         const forecastData = calculateForecast();
         
-        // 月平均返済額
-        els.avgPayment.textContent = `¥${fmt(forecastData.avgMonthlyPayment)}`;
+        // 月平均返済額を入力欄に表示
+        els.avgPaymentInput.value = Math.ceil(forecastData.avgMonthlyPayment);
         
         // 完済予定日と期間（ヘッダーに表示）
         if (forecastData.completionDate) {
@@ -950,13 +938,34 @@ input[type="number"]:focus, input[type="date"]:focus {
             return;
         }
 
-        // 実績データを月ごとに集計
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const currentMonthKey = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+        // 実績データを月ごとに集計（1-5日は前月扱い）
         const actualMonthly = {};
         actualData.forEach(row => {
-            const monthKey = `${row.date.getFullYear()}/${String(row.date.getMonth() + 1).padStart(2, '0')}`;
-            const displayKey = fmtDateShort(row.date); // 表示用の短縮キー
+            const date = new Date(row.date);
+            const day = date.getDate();
+            
+            // 1-5日の場合は前月として扱う
+            let displayDate = new Date(date);
+            if (day >= 1 && day <= 5) {
+                displayDate.setMonth(displayDate.getMonth() - 1);
+            }
+            
+            const monthKey = `${displayDate.getFullYear()}/${String(displayDate.getMonth() + 1).padStart(2, '0')}`;
+            const displayKey = fmtDateShort(displayDate);
+            
             if (!actualMonthly[monthKey]) {
-                actualMonthly[monthKey] = { payment: 0, interest: 0, principal: 0, isActual: true, displayMonth: displayKey };
+                actualMonthly[monthKey] = { 
+                    payment: 0, 
+                    interest: 0, 
+                    principal: 0, 
+                    isActual: true, 
+                    displayMonth: displayKey,
+                    isCurrentMonth: monthKey === currentMonthKey
+                };
             }
             actualMonthly[monthKey].payment += row.payment;
             actualMonthly[monthKey].interest += row.interest;
@@ -967,14 +976,17 @@ input[type="number"]:focus, input[type="date"]:focus {
         const forecastMonthly = {};
         if (forecastData && forecastData.length > 0) {
             forecastData.forEach(row => {
-                const monthKey = `${row.date.getFullYear()}/${String(row.date.getMonth() + 1).padStart(2, '0')}`;
-                const displayKey = fmtDateShort(row.date);
+                const date = new Date(row.date);
+                const monthKey = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+                const displayKey = fmtDateShort(date);
+                
                 forecastMonthly[monthKey] = {
                     payment: row.payment,
                     interest: row.interest,
                     principal: row.principal,
                     isActual: false,
-                    displayMonth: displayKey
+                    displayMonth: displayKey,
+                    isCurrentMonth: monthKey === currentMonthKey
                 };
             });
         }
@@ -983,15 +995,53 @@ input[type="number"]:focus, input[type="date"]:focus {
         const allMonths = [...Object.keys(actualMonthly), ...Object.keys(forecastMonthly)];
         const uniqueMonths = [...new Set(allMonths)].sort();
         
+        // 月平均返済額を取得（予測用）
+        const avgPayment = forecastData && forecastData.length > 0 ? forecastData[0].payment : 0;
+        const avgInterestRate = state.interestRate / 100 / 12; // 月利
+        
         const chartData = uniqueMonths.map(month => {
-            if (actualMonthly[month]) {
-                return { month, ...actualMonthly[month] };
-            } else {
-                return { month, ...forecastMonthly[month] };
+            const actual = actualMonthly[month];
+            const forecast = forecastMonthly[month];
+            const isCurrentMonth = month === currentMonthKey;
+            
+            if (actual && isCurrentMonth) {
+                // 当月：実績あり、予測も追加
+                return { 
+                    month, 
+                    payment: actual.payment,
+                    interest: actual.interest,
+                    principal: actual.principal,
+                    isActual: true,
+                    isCurrentMonth: true,
+                    avgPayment: avgPayment, // 予測額
+                    displayMonth: actual.displayMonth
+                };
+            } else if (actual) {
+                // 過去月：実績のみ
+                return { 
+                    month, 
+                    payment: actual.payment,
+                    interest: actual.interest,
+                    principal: actual.principal,
+                    isActual: true,
+                    isCurrentMonth: false,
+                    displayMonth: actual.displayMonth
+                };
+            } else if (forecast) {
+                // 未来月：予測のみ
+                return { 
+                    month, 
+                    payment: forecast.payment,
+                    interest: forecast.interest,
+                    principal: forecast.principal,
+                    isActual: false,
+                    isCurrentMonth: false,
+                    displayMonth: forecast.displayMonth
+                };
             }
-        });
+        }).filter(Boolean);
 
-        const maxPay = Math.max(...chartData.map(d => d.payment)) * 1.1;
+        const maxPay = Math.max(...chartData.map(d => d.payment || d.avgPayment || 0)) * 1.1;
         if (maxPay === 0) return;
 
         let svgContent = '';
@@ -1008,17 +1058,45 @@ input[type="number"]:focus, input[type="date"]:focus {
 
         chartData.forEach((d, i) => {
             const x = (i * (100 / count)) + (gap / 2);
-            const pH = Math.max(0, (d.principal / maxPay) * 100);
-            const iH = (d.interest / maxPay) * 100;
             
-            if (d.isActual) {
-                // 実績は濃い色
+            if (d.isCurrentMonth && d.avgPayment && d.avgPayment > 0) {
+                // 当月：予測バー（薄色・背景）+ 実績部分（濃色・前景）を重ねる
+                
+                // 予測バーの高さを計算（平均返済額で）
+                const avgInterestEstimate = d.avgPayment * 0.1; // 概算10%を利息とする
+                const avgPrincipalEstimate = d.avgPayment - avgInterestEstimate;
+                
+                const avgPH = Math.max(0, (avgPrincipalEstimate / maxPay) * 100);
+                const avgIH = (avgInterestEstimate / maxPay) * 100;
+                
+                // 1. まず予測バー（薄色・背景）を描画
+                svgContent += `<rect x="${x}%" y="${100 - (avgPH + avgIH)}%" width="${barW}%" height="${avgIH}%" fill="#fed7aa" />`;
+                svgContent += `<rect x="${x}%" y="${100 - avgPH}%" width="${barW}%" height="${avgPH}%" fill="#93c5fd" />`;
+                
+                // 2. その上に実績部分（濃色・前景）を重ねる
+                const pH = Math.max(0, (d.principal / maxPay) * 100);
+                const iH = (d.interest / maxPay) * 100;
+                
+                if (iH > 0) {
+                    svgContent += `<rect x="${x}%" y="${100 - (pH + iH)}%" width="${barW}%" height="${iH}%" fill="#fb923c" />`;
+                }
+                if (pH > 0) {
+                    svgContent += `<rect x="${x}%" y="${100 - pH}%" width="${barW}%" height="${pH}%" fill="#3b82f6" />`;
+                }
+            } else if (d.isActual) {
+                // 過去月：実績（濃色）のみ
+                const pH = Math.max(0, (d.principal / maxPay) * 100);
+                const iH = (d.interest / maxPay) * 100;
+                
                 svgContent += `<rect x="${x}%" y="${100 - (pH + iH)}%" width="${barW}%" height="${iH}%" fill="#fb923c" />`;
                 if (d.principal > 0) {
                     svgContent += `<rect x="${x}%" y="${100 - pH}%" width="${barW}%" height="${pH}%" fill="#3b82f6" />`;
                 }
             } else {
-                // 予測は淡い色
+                // 未来月：予測（薄色）のみ
+                const pH = Math.max(0, (d.principal / maxPay) * 100);
+                const iH = (d.interest / maxPay) * 100;
+                
                 svgContent += `<rect x="${x}%" y="${100 - (pH + iH)}%" width="${barW}%" height="${iH}%" fill="#fed7aa" />`;
                 if (d.principal > 0) {
                     svgContent += `<rect x="${x}%" y="${100 - pH}%" width="${barW}%" height="${pH}%" fill="#93c5fd" />`;
@@ -1042,11 +1120,12 @@ input[type="number"]:focus, input[type="date"]:focus {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        if (state.plan.length === 0) {
+        if (state.plan.length === 0 && state.plannedPayments.length === 0) {
             els.tbody.innerHTML = '<div style="padding:20px; text-align:center; color:#9ca3af;">返済記録がありません</div>';
             return;
         }
 
+        // 実績を表示
         state.plan.forEach(row => {
             const div = document.createElement('div');
             const isCompleted = row.date <= today;
@@ -1063,109 +1142,116 @@ input[type="number"]:focus, input[type="date"]:focus {
             fragment.appendChild(div);
         });
         
+        // 返済予定を表示
+        state.plannedPayments.forEach((planned, index) => {
+            const div = document.createElement('div');
+            div.className = 'row';
+            div.style.background = '#fef3c7';
+            
+            // 予定日時点での予測計算
+            const planDate = new Date(planned.date);
+            planDate.setHours(0, 0, 0, 0);
+            
+            // 現在の残高から予測
+            const todayData = calculateTodayBalance();
+            const lastPaymentDate = state.plan.length > 0 
+                ? new Date(state.plan[state.plan.length - 1].date)
+                : new Date(state.baseDate);
+            lastPaymentDate.setHours(0, 0, 0, 0);
+            
+            const daysFromLast = daysBetween(lastPaymentDate, planDate);
+            const interest = todayData.balance * (state.interestRate / 100) * daysFromLast / 365;
+            const principal = planned.amount - interest;
+            const balanceAfter = todayData.balance + interest - planned.amount;
+            
+            div.innerHTML = `
+                <div style="color: #92400e;">${fmtDate(planDate)} <span style="font-size: 0.65rem;">(予定)</span></div>
+                <div style="border-left:1px solid #f3f4f6; font-weight: 600; color: #92400e;">${fmt(planned.amount)}</div>
+                <div class="text-orange" style="border-left:1px solid #f3f4f6; opacity: 0.7;">${fmt(interest)}</div>
+                <div class="text-blue" style="border-left:1px solid #f3f4f6; opacity: 0.7;">${fmt(principal)}</div>
+                <div class="text-gray" style="border-left:1px solid #f3f4f6;">${fmt(Math.max(0, balanceAfter))}</div>
+                <button onclick="removePlannedPayment(${index})" style="position: absolute; right: 8px; background: #fca5a5; color: white; border: none; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">削除</button>
+            `;
+            div.style.position = 'relative';
+            fragment.appendChild(div);
+        });
+        
         els.tbody.innerHTML = '';
         els.tbody.appendChild(fragment);
     }
 
-    // 初期計算
-    calculate();
-    
-    // 返済シミュレーション機能
-    window.simulatePayment = function() {
-        const simDateInput = document.getElementById('sim-date');
-        const simAmountInput = document.getElementById('sim-amount');
-        const simDate = simDateInput.value;
-        const simAmount = Number(simAmountInput.value);
-        
-        if (!simDate || !simAmount || simAmount <= 0) {
-            alert('日付と金額を正しく入力してください');
+    // 平均返済額を更新
+    window.updateAvgPayment = function() {
+        const value = Number(els.avgPaymentInput.value);
+        if (isNaN(value) || value < 0) {
+            alert('正しい金額を入力してください');
             return;
         }
         
-        const paymentDate = new Date(simDate);
-        paymentDate.setHours(0, 0, 0, 0);
+        state.customAvgPayment = value;
+        render(); // グラフを再描画
+    };
+    
+    // 平均返済額を自動計算に戻す
+    window.resetAvgPayment = function() {
+        state.customAvgPayment = null;
+        render(); // グラフを再描画
+    };
+    
+    // 初期計算
+    calculate();
+    
+    // 返済予定を追加
+    window.addPaymentPlan = function() {
+        const dateInput = document.getElementById('new-payment-date');
+        const amountInput = document.getElementById('new-payment-amount');
         
+        const date = dateInput.value;
+        const amount = Number(amountInput.value);
+        
+        if (!date) {
+            alert('返済予定日を入力してください');
+            return;
+        }
+        
+        if (!amount || amount <= 0) {
+            alert('正しい返済金額を入力してください');
+            return;
+        }
+        
+        const planDate = new Date(date);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        if (paymentDate < today) {
+        if (planDate < today) {
             alert('未来の日付を入力してください');
             return;
         }
         
-        // 現在の残高を取得
-        const todayData = calculateTodayBalance();
-        let currentBalance = todayData.balance;
+        // 返済予定を追加
+        state.plannedPayments.push({
+            date: date,
+            amount: amount
+        });
         
-        // 今日から最後の返済日までの未払利息を加算
-        const lastPaymentDate = state.plan.length > 0 
-            ? new Date(state.plan[state.plan.length - 1].date)
-            : new Date(state.baseDate);
-        lastPaymentDate.setHours(0, 0, 0, 0);
+        // 日付でソート
+        state.plannedPayments.sort((a, b) => new Date(a.date) - new Date(b.date));
         
-        const daysFromLastToToday = daysBetween(lastPaymentDate, today);
-        const interestToToday = currentBalance * (state.interestRate / 100) * daysFromLastToToday / 365;
-        currentBalance += interestToToday;
+        // フォームをクリア
+        dateInput.value = '';
+        amountInput.value = '';
         
-        // 今日からシミュレーション日までの利息計算
-        const daysFromToday = daysBetween(today, paymentDate);
-        const interest = currentBalance * (state.interestRate / 100) * daysFromToday / 365;
-        
-        // 返済前残高
-        const balanceBeforePayment = currentBalance + interest;
-        
-        // 元金返済額
-        const principal = simAmount - interest;
-        
-        // 返済後残高
-        const balanceAfter = balanceBeforePayment - simAmount;
-        
-        // 残高減少額
-        const reduction = currentBalance - balanceAfter;
-        
-        // 新しい完済予定を計算
-        const forecastData = calculateForecast();
-        const avgPayment = forecastData.avgMonthlyPayment;
-        
-        // 簡易計算: 返済後残高での完済月数
-        const monthlyInterestRate = state.interestRate / 100 / 12;
-        const monthlyInterest = balanceAfter * monthlyInterestRate;
-        const netMonthlyPayment = avgPayment - monthlyInterest;
-        
-        let newCompletionDate = '--';
-        if (netMonthlyPayment > 0 && balanceAfter > 0) {
-            const estimatedMonths = Math.ceil(balanceAfter / netMonthlyPayment);
-            const completionDate = new Date(paymentDate);
-            completionDate.setMonth(completionDate.getMonth() + estimatedMonths);
-            newCompletionDate = fmtDate(completionDate);
-        } else if (balanceAfter <= 0) {
-            newCompletionDate = fmtDate(paymentDate) + ' (完済)';
+        // 再描画
+        renderTable();
+    };
+    
+    // 返済予定を削除
+    window.removePlannedPayment = function(index) {
+        if (confirm('この返済予定を削除しますか？')) {
+            state.plannedPayments.splice(index, 1);
+            renderTable();
         }
-        
-        // 結果を表示
-        document.getElementById('sim-balance-before').textContent = `¥${fmt(balanceBeforePayment)}`;
-        document.getElementById('sim-days').textContent = daysFromToday;
-        document.getElementById('sim-interest').textContent = `¥${fmt(interest)}`;
-        document.getElementById('sim-principal').textContent = `¥${fmt(principal)}`;
-        document.getElementById('sim-balance-after').textContent = `¥${fmt(Math.max(0, balanceAfter))}`;
-        document.getElementById('sim-reduction').textContent = `¥${fmt(reduction)}`;
-        document.getElementById('sim-new-completion').textContent = newCompletionDate;
-        
-        document.getElementById('simulation-result').style.display = 'block';
     };
-    
-    // シミュレーションクリア
-    window.clearSimulation = function() {
-        document.getElementById('sim-date').value = '';
-        document.getElementById('sim-amount').value = '';
-        document.getElementById('simulation-result').style.display = 'none';
-    };
-    
-    // デフォルト日付を来月1日に設定
-    const nextMonth = new Date();
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    nextMonth.setDate(1);
-    document.getElementById('sim-date').value = nextMonth.toISOString().split('T')[0];
     
     // 日付が変わったら自動更新（1分ごとにチェック）
     setInterval(() => {
