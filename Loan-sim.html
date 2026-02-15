@@ -16,7 +16,7 @@
     }
     h1, h2, p { margin: 0; }
 
-
+```
 /* コンポーネント */
 .card {
     background: white; border-radius: 12px;
@@ -94,9 +94,11 @@ input[type="number"]:focus, input[type="date"]:focus {
     display: grid; grid-template-columns: 2fr 3fr 2.5fr 2.5fr 3fr;
     border-bottom: 1px solid #f3f4f6; align-items: center;
     font-size: 0.75rem;
+    position: relative; /* 削除ボタンの配置用 */
 }
 .row.custom { background-color: #fefce8; }
 .row.completed { background-color: #f0fdf4; opacity: 0.7; }
+.row.planned { background-color: #fef3c7; }
 .row > div { padding: 10px 6px; text-align: right; }
 .row > div:first-child { text-align: center; color: #6b7280; font-weight: 500; font-size: 0.7rem; }
 
@@ -338,7 +340,7 @@ input[type="number"]:focus, input[type="date"]:focus {
 .verification-box.error {
     background: #fee2e2; border-left: 4px solid #ef4444;
 }
-
+```
 
 </style>
 </head>
@@ -357,7 +359,7 @@ input[type="number"]:focus, input[type="date"]:focus {
         </div>
     </div>
 
-
+```
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
     <div class="badge">
         <span style="font-size: 0.75rem; color: #2563eb; font-weight: bold;">返済完了まで</span>
@@ -368,7 +370,7 @@ input[type="number"]:focus, input[type="date"]:focus {
         <span id="completion-date-header" class="badge-val" style="color: #78350f; font-size: 0.95rem; white-space: nowrap;">--</span>
     </div>
 </div>
-
+```
 
 </div>
 
@@ -404,7 +406,7 @@ input[type="number"]:focus, input[type="date"]:focus {
         借入情報
     </h2>
 
-
+```
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 12px; background: #f9fafb; border-radius: 8px;">
     <div>
         <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">基準日</p>
@@ -438,7 +440,7 @@ input[type="number"]:focus, input[type="date"]:focus {
         <p id="total-interest" style="font-size: 1.125rem; font-weight: bold; color: #f97316;">¥0</p>
     </div>
 </div>
-
+```
 
 </div>
 
@@ -448,7 +450,7 @@ input[type="number"]:focus, input[type="date"]:focus {
     <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 8px;">返済推移</h2>
     <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 16px;">実績（濃色）と月平均返済額での予測（淡色）</p>
 
-
+```
 <div style="height: 200px; width: 100%;">
     <svg id="combined-chart" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style="overflow: visible;">
     </svg>
@@ -482,7 +484,7 @@ input[type="number"]:focus, input[type="date"]:focus {
     </div>
     <p style="font-size: 0.65rem; color: #1e40af; margin-top: 4px; opacity: 0.8;">※ 手動で変更可能。「自動計算」で実績平均に戻ります</p>
 </div>
-
+```
 
 </div>
 
@@ -499,7 +501,7 @@ input[type="number"]:focus, input[type="date"]:focus {
         </div>
     </div>
 
-
+```
 <div class="table-header">
     <div>返済日</div>
     <div style="border-left: 1px solid #e5e7eb;">返済額</div>
@@ -533,7 +535,7 @@ input[type="number"]:focus, input[type="date"]:focus {
         </button>
     </div>
 </div>
-
+```
 
 </div>
 
@@ -621,7 +623,16 @@ input[type="number"]:focus, input[type="date"]:focus {
         return Math.floor(diff / (1000 * 60 * 60 * 24));
     };
 
-    // 今日の残高を計算（実際の返済記録に基づく）
+    // 全ての返済（実績+予定）を取得
+    const getAllPayments = () => {
+        const allPayments = [
+            ...state.paymentHistory.map(p => ({ ...p, isPlanned: false })),
+            ...state.plannedPayments.map(p => ({ ...p, isPlanned: true }))
+        ];
+        return allPayments.sort((a, b) => new Date(a.date) - new Date(b.date));
+    };
+
+    // 今日の残高を計算（実際の返済記録+予定に基づく）
     const calculateTodayBalance = () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -629,10 +640,8 @@ input[type="number"]:focus, input[type="date"]:focus {
         const rate = state.interestRate / 100;
         let balance = state.loanAmount;
         
-        // 返済記録を日付順にソート
-        const payments = [...state.paymentHistory].sort((a, b) => 
-            new Date(a.date) - new Date(b.date)
-        );
+        // 全ての返済（実績+予定）を取得
+        const payments = getAllPayments();
         
         let lastDate = new Date(state.baseDate);
         lastDate.setHours(0, 0, 0, 0);
@@ -670,55 +679,8 @@ input[type="number"]:focus, input[type="date"]:focus {
             totalBalance: balance + accruedInterest
         };
     };
-    
-    // 検算: 2026/2/14時点の残高を確認
-    const verifyCalculation = () => {
-        const checkDate = new Date('2026-02-14');
-        checkDate.setHours(0, 0, 0, 0);
-        
-        const rate = state.interestRate / 100;
-        let balance = state.loanAmount;
-        
-        const payments = [...state.paymentHistory].sort((a, b) => 
-            new Date(a.date) - new Date(b.date)
-        );
-        
-        let lastDate = new Date(state.baseDate);
-        lastDate.setHours(0, 0, 0, 0);
-        let totalInterestPaid = 0;
-        
-        for (const payment of payments) {
-            const paymentDate = new Date(payment.date);
-            paymentDate.setHours(0, 0, 0, 0);
-            
-            if (paymentDate > checkDate) break;
-            
-            const days = daysBetween(lastDate, paymentDate);
-            const interest = balance * rate * days / 365;
-            
-            totalInterestPaid += interest;
-            balance = balance + interest - payment.amount;
-            lastDate = new Date(paymentDate);
-        }
-        
-        // 最後の返済から2/14までの利息を加算
-        const daysToCheck = daysBetween(lastDate, checkDate);
-        const finalInterest = balance * rate * daysToCheck / 365;
-        const finalBalance = balance + finalInterest;
-        
-        const diff = Math.abs(finalBalance - EXPECTED_BALANCE_2026_02_14);
-        const isCorrect = diff < 1; // 1円未満の誤差は許容
-        
-        return {
-            isCorrect: isCorrect,
-            calculatedBalance: finalBalance,
-            expectedBalance: EXPECTED_BALANCE_2026_02_14,
-            difference: finalBalance - EXPECTED_BALANCE_2026_02_14,
-            totalInterestPaid: totalInterestPaid
-        };
-    };
 
-    // 計算ロジック（返済記録に基づく）
+    // 計算ロジック（返済記録+予定に基づく）
     function calculate() {
         const annualRate = state.interestRate / 100;
         let balance = state.loanAmount;
@@ -727,10 +689,8 @@ input[type="number"]:focus, input[type="date"]:focus {
 
         state.plan = [];
 
-        // 返済記録を日付順にソート
-        const payments = [...state.paymentHistory].sort((a, b) => 
-            new Date(a.date) - new Date(b.date)
-        );
+        // 全ての返済（実績+予定）を取得
+        const payments = getAllPayments();
 
         let lastDate = new Date(state.baseDate);
         lastDate.setHours(0, 0, 0, 0);
@@ -765,7 +725,8 @@ input[type="number"]:focus, input[type="date"]:focus {
                 principal: principalPaid,
                 interest: interestPaid,
                 balance: balance,
-                daysElapsed: days
+                daysElapsed: days,
+                isPlanned: payment.isPlanned
             });
 
             lastDate = new Date(paymentDate);
@@ -780,7 +741,6 @@ input[type="number"]:focus, input[type="date"]:focus {
     
     // 将来予測を計算（月平均返済額で返済を続けた場合）
     function calculateForecast() {
-        // 2025/11から前月までの返済を集計（1-5日は前月扱い）
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -788,7 +748,9 @@ input[type="number"]:focus, input[type="date"]:focus {
         const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
         
         const monthlyData = {};
-        state.plan.forEach(row => {
+        
+        // 実績のみを集計（予定は除外）
+        state.plan.filter(row => !row.isPlanned).forEach(row => {
             const date = new Date(row.date);
             const day = date.getDate();
             
@@ -943,6 +905,7 @@ input[type="number"]:focus, input[type="date"]:focus {
         const currentMonthKey = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}`;
 
         // 実績データを月ごとに集計（1-5日は前月扱い）
+        // 返済予定も実績として扱う
         const actualMonthly = {};
         actualData.forEach(row => {
             const date = new Date(row.date);
@@ -972,7 +935,7 @@ input[type="number"]:focus, input[type="date"]:focus {
             actualMonthly[monthKey].principal += row.principal;
         });
 
-        // 予測データを月ごとに変換
+        // 予測データを月ごとに変換（返済予定がない月のみ）
         const forecastMonthly = {};
         if (forecastData && forecastData.length > 0) {
             forecastData.forEach(row => {
@@ -980,14 +943,17 @@ input[type="number"]:focus, input[type="date"]:focus {
                 const monthKey = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
                 const displayKey = fmtDateShort(date);
                 
-                forecastMonthly[monthKey] = {
-                    payment: row.payment,
-                    interest: row.interest,
-                    principal: row.principal,
-                    isActual: false,
-                    displayMonth: displayKey,
-                    isCurrentMonth: monthKey === currentMonthKey
-                };
+                // その月に実績（返済予定含む）がない場合のみ予測を追加
+                if (!actualMonthly[monthKey]) {
+                    forecastMonthly[monthKey] = {
+                        payment: row.payment,
+                        interest: row.interest,
+                        principal: row.principal,
+                        isActual: false,
+                        displayMonth: displayKey,
+                        isCurrentMonth: monthKey === currentMonthKey
+                    };
+                }
             });
         }
 
@@ -995,9 +961,9 @@ input[type="number"]:focus, input[type="date"]:focus {
         const allMonths = [...Object.keys(actualMonthly), ...Object.keys(forecastMonthly)];
         const uniqueMonths = [...new Set(allMonths)].sort();
         
-        // 月平均返済額を取得（予測用）
-        const avgPayment = forecastData && forecastData.length > 0 ? forecastData[0].payment : 0;
-        const avgInterestRate = state.interestRate / 100 / 12; // 月利
+        // 月平均返済額を取得（当月の予測バー用）
+        const forecastDataObj = calculateForecast();
+        const avgPayment = forecastDataObj.avgMonthlyPayment;
         
         const chartData = uniqueMonths.map(month => {
             const actual = actualMonthly[month];
@@ -1041,7 +1007,7 @@ input[type="number"]:focus, input[type="date"]:focus {
             }
         }).filter(Boolean);
 
-        const maxPay = Math.max(...chartData.map(d => d.payment || d.avgPayment || 0)) * 1.1;
+        const maxPay = Math.max(...chartData.map(d => d.payment || 0)) * 1.1;
         if (maxPay === 0) return;
 
         let svgContent = '';
@@ -1059,7 +1025,7 @@ input[type="number"]:focus, input[type="date"]:focus {
         chartData.forEach((d, i) => {
             const x = (i * (100 / count)) + (gap / 2);
             
-            if (d.isCurrentMonth && d.avgPayment && d.avgPayment > 0) {
+            if (d.isCurrentMonth && d.isActual && d.avgPayment && d.avgPayment > 0) {
                 // 当月：予測バー（薄色・背景）+ 実績部分（濃色・前景）を重ねる
                 
                 // 予測バーの高さを計算（平均返済額で）
@@ -1084,7 +1050,7 @@ input[type="number"]:focus, input[type="date"]:focus {
                     svgContent += `<rect x="${x}%" y="${100 - pH}%" width="${barW}%" height="${pH}%" fill="#3b82f6" />`;
                 }
             } else if (d.isActual) {
-                // 過去月：実績（濃色）のみ
+                // 過去月または未来の返済予定：実績（濃色）のみ
                 const pH = Math.max(0, (d.principal / maxPay) * 100);
                 const iH = (d.interest / maxPay) * 100;
                 
@@ -1120,59 +1086,85 @@ input[type="number"]:focus, input[type="date"]:focus {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        if (state.plan.length === 0 && state.plannedPayments.length === 0) {
+        if (state.plan.length === 0) {
             els.tbody.innerHTML = '<div style="padding:20px; text-align:center; color:#9ca3af;">返済記録がありません</div>';
             return;
         }
 
-        // 実績を表示
-        state.plan.forEach(row => {
+        // plannedPaymentsのインデックスを追跡
+        let plannedIndex = 0;
+
+        // 全ての返済を表示（実績+予定）
+        state.plan.forEach((row, index) => {
             const div = document.createElement('div');
             const isCompleted = row.date <= today;
+            const isPlanned = row.isPlanned;
             
-            div.className = `row ${isCompleted ? 'completed' : ''}`;
+            // 過去の実績は薄緑、返済予定は黄色
+            if (isCompleted && !isPlanned) {
+                div.className = 'row completed';
+            } else if (isPlanned) {
+                div.className = 'row planned';
+            } else {
+                div.className = 'row';
+            }
 
-            div.innerHTML = `
-                <div>${fmtDate(row.date)}</div>
-                <div style="border-left:1px solid #f3f4f6; font-weight: 600;">${fmt(row.payment)}</div>
-                <div class="text-orange" style="border-left:1px solid #f3f4f6;">${fmt(row.interest)}</div>
-                <div class="text-blue" style="border-left:1px solid #f3f4f6;">${fmt(row.principal)}</div>
-                <div class="text-gray" style="border-left:1px solid #f3f4f6;">${fmt(row.balance)}</div>
-            `;
-            fragment.appendChild(div);
-        });
-        
-        // 返済予定を表示
-        state.plannedPayments.forEach((planned, index) => {
-            const div = document.createElement('div');
-            div.className = 'row';
-            div.style.background = '#fef3c7';
+            // 5つのセルを作成
+            const dateCell = document.createElement('div');
+            dateCell.textContent = fmtDate(row.date);
             
-            // 予定日時点での予測計算
-            const planDate = new Date(planned.date);
-            planDate.setHours(0, 0, 0, 0);
+            const paymentCell = document.createElement('div');
+            paymentCell.style.cssText = 'border-left:1px solid #f3f4f6; font-weight: 600;';
+            paymentCell.textContent = fmt(row.payment);
             
-            // 現在の残高から予測
-            const todayData = calculateTodayBalance();
-            const lastPaymentDate = state.plan.length > 0 
-                ? new Date(state.plan[state.plan.length - 1].date)
-                : new Date(state.baseDate);
-            lastPaymentDate.setHours(0, 0, 0, 0);
+            const interestCell = document.createElement('div');
+            interestCell.className = 'text-orange';
+            interestCell.style.cssText = 'border-left:1px solid #f3f4f6;';
+            interestCell.textContent = fmt(row.interest);
             
-            const daysFromLast = daysBetween(lastPaymentDate, planDate);
-            const interest = todayData.balance * (state.interestRate / 100) * daysFromLast / 365;
-            const principal = planned.amount - interest;
-            const balanceAfter = todayData.balance + interest - planned.amount;
+            const principalCell = document.createElement('div');
+            principalCell.className = 'text-blue';
+            principalCell.style.cssText = 'border-left:1px solid #f3f4f6;';
+            principalCell.textContent = fmt(row.principal);
             
-            div.innerHTML = `
-                <div style="color: #92400e;">${fmtDate(planDate)} <span style="font-size: 0.65rem;">(予定)</span></div>
-                <div style="border-left:1px solid #f3f4f6; font-weight: 600; color: #92400e;">${fmt(planned.amount)}</div>
-                <div class="text-orange" style="border-left:1px solid #f3f4f6; opacity: 0.7;">${fmt(interest)}</div>
-                <div class="text-blue" style="border-left:1px solid #f3f4f6; opacity: 0.7;">${fmt(principal)}</div>
-                <div class="text-gray" style="border-left:1px solid #f3f4f6;">${fmt(Math.max(0, balanceAfter))}</div>
-                <button onclick="removePlannedPayment(${index})" style="position: absolute; right: 8px; background: #fca5a5; color: white; border: none; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">削除</button>
-            `;
-            div.style.position = 'relative';
+            const balanceCell = document.createElement('div');
+            balanceCell.className = 'text-gray';
+            balanceCell.style.cssText = 'border-left:1px solid #f3f4f6; position: relative; display: flex; align-items: center; justify-content: flex-end; gap: 8px;';
+            
+            // 残高テキストをspan要素で作成
+            const balanceText = document.createElement('span');
+            balanceText.textContent = fmt(row.balance);
+            balanceCell.appendChild(balanceText);
+            
+            div.appendChild(dateCell);
+            div.appendChild(paymentCell);
+            div.appendChild(interestCell);
+            div.appendChild(principalCell);
+            div.appendChild(balanceCell);
+            
+            // 削除ボタンを追加（返済予定のみ） - 残高セルの中に配置
+            if (isPlanned) {
+                const currentPlannedIndex = plannedIndex;
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '削除';
+                deleteBtn.type = 'button';
+                deleteBtn.style.cssText = 'background: #ef4444; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; cursor: pointer; white-space: nowrap;';
+                
+                deleteBtn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (confirm('この返済予定を削除しますか？')) {
+                        state.plannedPayments.splice(currentPlannedIndex, 1);
+                        calculate();
+                    }
+                };
+                
+                balanceCell.appendChild(deleteBtn);
+                plannedIndex++;
+            }
+            
             fragment.appendChild(div);
         });
         
@@ -1241,16 +1233,8 @@ input[type="number"]:focus, input[type="date"]:focus {
         dateInput.value = '';
         amountInput.value = '';
         
-        // 再描画
-        renderTable();
-    };
-    
-    // 返済予定を削除
-    window.removePlannedPayment = function(index) {
-        if (confirm('この返済予定を削除しますか？')) {
-            state.plannedPayments.splice(index, 1);
-            renderTable();
-        }
+        // 再計算
+        calculate();
     };
     
     // 日付が変わったら自動更新（1分ごとにチェック）
