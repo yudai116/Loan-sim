@@ -1,3 +1,542 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>返済シミュレーター v8</title>
+<style>
+    /* リセットと基本スタイル */
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+        margin: 0; padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f9fafb; color: #1f2937;
+        padding-bottom: 80px;
+    }
+    h1, h2, p { margin: 0; }
+
+```
+/* コンポーネント */
+.card {
+    background: white; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 20px; margin-bottom: 20px;
+}
+.header {
+    border-bottom: 4px solid #3b82f6;
+    display: flex; flex-direction: column; gap: 12px;
+}
+.title-row { display: flex; align-items: center; gap: 12px; }
+.icon-box {
+    background: #dbeafe; color: #2563eb;
+    padding: 8px; border-radius: 8px; display: flex;
+}
+.badge {
+    background: #eff6ff; border: 1px solid #dbeafe;
+    padding: 10px 16px; border-radius: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.badge-val { font-size: 1.25rem; font-weight: bold; color: #1f2937; }
+.badge-err { color: #ef4444; font-weight: bold; font-size: 0.875rem; display: flex; align-items: center; gap: 4px; }
+
+/* 今日の残高表示 */
+.today-balance {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white; padding: 20px; border-radius: 12px;
+    margin-bottom: 20px;
+}
+.today-balance .date { font-size: 0.875rem; opacity: 0.9; margin-bottom: 8px; }
+.today-balance .amount { font-size: 2rem; font-weight: bold; }
+.today-balance .interest-info { font-size: 0.75rem; opacity: 0.8; margin-top: 8px; }
+
+/* フォーム */
+.form-group { margin-bottom: 16px; }
+.form-group:last-child { margin-bottom: 0; }
+label { display: block; font-size: 0.75rem; font-weight: 600; color: #4b5563; margin-bottom: 4px; }
+.input-wrap { position: relative; }
+.input-icon {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    color: #9ca3af; pointer-events: none;
+}
+input[type="number"], input[type="date"] {
+    width: 100%; padding: 10px 12px 10px 36px;
+    border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 1rem; -webkit-appearance: none;
+}
+input[type="number"]:focus, input[type="date"]:focus { 
+    outline: none; border-color: #3b82f6; ring: 2px solid #93c5fd; 
+}
+
+/* 特別な入力フィールド */
+.highlight-input input {
+    border-color: #93c5fd; color: #1e3a8a; font-weight: bold; font-size: 1.125rem;
+}
+.highlight-input .input-icon { color: #3b82f6; }
+
+/* テーブル */
+.table-container {
+    background: white; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+.table-header {
+    background: #f3f4f6; padding: 12px;
+    display: grid; grid-template-columns: 2fr 3fr 2.5fr 2.5fr 3fr;
+    font-size: 0.75rem; font-weight: 600; color: #4b5563;
+    border-bottom: 1px solid #e5e7eb;
+}
+.table-header > div { text-align: right; }
+.table-header > div:first-child { text-align: center; }
+
+.table-body { overflow-y: visible; }
+.row {
+    display: grid; grid-template-columns: 2fr 3fr 2.5fr 2.5fr 3fr;
+    border-bottom: 1px solid #f3f4f6; align-items: center;
+    font-size: 0.75rem;
+    position: relative; /* 削除ボタンの配置用 */
+}
+.row.custom { background-color: #fefce8; }
+.row.completed { background-color: #f0fdf4; opacity: 0.7; }
+.row.planned { background-color: #fef3c7; }
+.row > div { padding: 10px 6px; text-align: right; }
+.row > div:first-child { text-align: center; color: #6b7280; font-weight: 500; font-size: 0.7rem; }
+
+/* テーブル内の入力 */
+.row input[type="number"] {
+    width: 100%; padding: 6px; text-align: right;
+    border: 1px solid #e5e7eb; border-radius: 4px;
+    font-size: 0.875rem; background: #f9fafb;
+    padding-left: 6px;
+}
+.row.custom input { background: white; border-color: #fde047; }
+
+/* グラフ */
+.chart-legend { 
+    display: flex; 
+    justify-content: center; 
+    gap: 8px; 
+    font-size: 0.65rem; 
+    margin-top: 12px; 
+    font-weight: 500;
+    flex-wrap: wrap;
+}
+.legend-item { 
+    display: flex; 
+    align-items: center; 
+    gap: 4px;
+    white-space: nowrap;
+}
+.dot { width: 12px; height: 12px; border-radius: 3px; }
+.dot-p { background: #3b82f6; }
+.dot-i { background: #fb923c; }
+
+.chart-labels {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 8px;
+    font-size: 0.6rem;
+    color: #6b7280;
+    padding: 0 4px;
+    white-space: nowrap;
+    overflow-x: auto;
+    gap: 2px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.chart-labels::-webkit-scrollbar {
+    height: 4px;
+}
+
+.chart-labels::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 2px;
+}
+
+.chart-labels::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 2px;
+}
+
+.chart-labels span {
+    flex-shrink: 0;
+    flex: 1;
+    text-align: center;
+    min-width: fit-content;
+}
+
+/* ユーティリティ */
+.text-blue { color: #2563eb; }
+.text-orange { color: #f97316; }
+.text-gray { color: #9ca3af; }
+.text-green { color: #10b981; }
+.w-icon { width: 20px; height: 20px; }
+.reset-btn {
+    background: none; border: 1px solid #fca5a5; color: #ef4444;
+    border-radius: 4px; padding: 4px 8px; font-size: 0.75rem;
+    cursor: pointer; margin-left: auto;
+}
+
+.info-box {
+    background: #fef3c7; border-left: 4px solid #f59e0b;
+    padding: 12px; border-radius: 4px; font-size: 0.875rem;
+    margin-top: 12px;
+}
+
+.simulation-box {
+    background: #f0fdf4; border: 2px solid #86efac;
+    border-radius: 12px; padding: 16px;
+}
+
+.simulation-result {
+    background: #dcfce7; border-left: 4px solid #22c55e;
+    padding: 16px; border-radius: 8px; margin-top: 16px;
+}
+
+.impact-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #bbf7d0;
+}
+
+.impact-item:last-child {
+    border-bottom: none;
+}
+
+.impact-label {
+    font-size: 0.875rem;
+    color: #166534;
+}
+
+.impact-value {
+    font-size: 1.125rem;
+    font-weight: bold;
+    color: #15803d;
+}
+
+.impact-value.positive {
+    color: #16a34a;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+    transition: all 0.2s;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-secondary {
+    background: white;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-secondary:active {
+    background: #f9fafb;
+}
+
+.progress-container {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.progress-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.progress-percentage {
+    font-size: 1.5rem;
+    font-weight: bold;
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.progress-bar-wrapper {
+    width: 100%;
+    height: 24px;
+    background: #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+    border-radius: 12px;
+    transition: width 1s ease-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.3) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.progress-details {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.verification-box {
+    background: #dcfce7; border-left: 4px solid #22c55e;
+    padding: 12px; border-radius: 4px; font-size: 0.875rem;
+    margin-top: 12px;
+}
+
+.verification-box.error {
+    background: #fee2e2; border-left: 4px solid #ef4444;
+}
+
+
+</style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+
+<div class="card header">
+    <div class="title-row">
+        <div class="icon-box">
+            <svg class="w-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+            <h1 style="font-size: 1.25rem; font-weight: bold;">返済シミュレーター</h1>
+            <p style="font-size: 0.75rem; color: #6b7280;">v8 単利日毎計算</p>
+        </div>
+    </div>
+
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+    <div class="badge">
+        <span style="font-size: 0.75rem; color: #2563eb; font-weight: bold;">返済完了まで</span>
+        <span id="duration-display" class="badge-val">--</span>
+    </div>
+    <div class="badge" style="background: #fef3c7; border-color: #fde047;">
+        <span style="font-size: 0.75rem; color: #92400e; font-weight: bold;">完済予定</span>
+        <span id="completion-date-header" class="badge-val" style="color: #78350f; font-size: 0.95rem; white-space: nowrap;">--</span>
+    </div>
+</div>
+
+
+</div>
+
+<!-- 今日の残高 -->
+
+<div class="today-balance">
+    <div class="date" id="today-date">--</div>
+    <div class="amount" id="today-balance">¥--</div>
+    <div class="interest-info" id="daily-interest">--</div>
+</div>
+
+<!-- 完済率プログレスバー -->
+
+<div class="progress-container">
+    <div class="progress-header">
+        <span class="progress-label">💪 完済進捗率</span>
+        <span class="progress-percentage" id="completion-percentage">0%</span>
+    </div>
+    <div class="progress-bar-wrapper">
+        <div class="progress-bar-fill" id="progress-bar-fill" style="width: 0%"></div>
+    </div>
+    <div class="progress-details">
+        <span>元金返済済: <strong id="principal-paid">¥0</strong></span>
+        <span>残り元金: <strong id="principal-remaining">¥0</strong></span>
+    </div>
+</div>
+
+<!-- 入力フォーム -->
+
+<div class="card">
+    <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #f3f4f6; padding-bottom: 8px;">
+        <svg class="w-icon text-blue" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        借入情報
+    </h2>
+
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 12px; background: #f9fafb; border-radius: 8px;">
+    <div>
+        <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">基準日</p>
+        <p style="font-size: 1rem; font-weight: 600;">2025/11/06</p>
+    </div>
+    <div>
+        <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">借入金額</p>
+        <p style="font-size: 1rem; font-weight: 600;">¥1,086,102</p>
+    </div>
+    <div>
+        <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">年利</p>
+        <p style="font-size: 1rem; font-weight: 600;">18.0%</p>
+    </div>
+    <div>
+        <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">計算方式</p>
+        <p style="font-size: 1rem; font-weight: 600;">単利日割</p>
+    </div>
+</div>
+
+<div class="info-box">
+    💡 <strong>単利日毎計算:</strong> 利息は元金×0.18×日数÷365で毎日発生します。ページを開くたびに、今日時点での最新残高が表示されます。
+</div>
+
+<div style="display: flex; justify-content: space-between; margin-top: 16px; padding-top: 12px; border-top: 1px solid #f3f4f6;">
+    <div>
+        <p style="font-size: 0.75rem; color: #6b7280;">総支払予定額</p>
+        <p id="total-payment" style="font-size: 1.125rem; font-weight: bold;">¥0</p>
+    </div>
+    <div style="text-align: right;">
+        <p style="font-size: 0.75rem; color: #6b7280;">うち利息</p>
+        <p id="total-interest" style="font-size: 1.125rem; font-weight: bold; color: #f97316;">¥0</p>
+    </div>
+</div>
+
+</div>
+
+<!-- グラフ（実績+シミュレーション統合） -->
+
+<div class="card">
+    <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 8px;">返済推移</h2>
+    <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 16px;">実績（濃色）と月平均返済額での予測（淡色）</p>
+
+
+<div style="height: 200px; width: 100%;">
+    <svg id="combined-chart" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style="overflow: visible;">
+    </svg>
+</div>
+<div id="combined-labels" class="chart-labels"></div>
+<div class="chart-legend">
+    <div class="legend-item"><span class="dot dot-p"></span> 元金（実績）</div>
+    <div class="legend-item"><span class="dot dot-i"></span> 利息（実績）</div>
+    <div class="legend-item"><span class="dot" style="background: #93c5fd;"></span> 元金（予測）</div>
+    <div class="legend-item"><span class="dot" style="background: #fed7aa;"></span> 利息（予測）</div>
+</div>
+<div style="margin-top: 12px; padding: 12px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
+    <label style="font-size: 0.75rem; color: #1e40af; font-weight: 600; margin-bottom: 4px; display: block;">📊 月平均返済額</label>
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <div style="position: relative; flex: 1;">
+            <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #1e3a8a; font-weight: 600;">¥</span>
+            <input 
+                type="number" 
+                id="avg-payment-input" 
+                style="width: 100%; padding: 8px 8px 8px 24px; border: 2px solid #3b82f6; border-radius: 6px; font-size: 1.125rem; font-weight: bold; color: #1e3a8a;"
+                step="1000"
+                onchange="updateAvgPayment()"
+            >
+        </div>
+        <button 
+            onclick="resetAvgPayment()" 
+            style="padding: 8px 12px; background: white; border: 1px solid #3b82f6; color: #3b82f6; border-radius: 6px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;"
+        >
+            自動計算
+        </button>
+    </div>
+    <p style="font-size: 0.65rem; color: #1e40af; margin-top: 4px; opacity: 0.8;">※ 手動で変更可能。「自動計算」で実績平均に戻ります</p>
+</div>
+
+
+</div>
+
+<!-- テーブル -->
+
+<div class="table-container">
+    <div style="padding: 12px; background: #f9fafb; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb;">
+        <div>
+            <h2 style="font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                <svg class="w-icon text-gray" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                返済実績
+            </h2>
+            <p style="font-size: 0.65rem; color: #9ca3af; margin-top: 4px;">※ 1〜5日の返済は前月分として集計</p>
+        </div>
+    </div>
+
+<div class="table-header">
+    <div>返済日</div>
+    <div style="border-left: 1px solid #e5e7eb;">返済額</div>
+    <div style="border-left: 1px solid #e5e7eb;">利息</div>
+    <div style="border-left: 1px solid #e5e7eb;">元金</div>
+    <div style="border-left: 1px solid #e5e7eb;">残高</div>
+</div>
+
+<div id="table-body" class="table-body">
+</div>
+
+<!-- 返済予定追加フォーム -->
+<div style="padding: 16px; background: #f0fdf4; border-top: 2px solid #86efac;">
+    <h3 style="font-size: 0.875rem; font-weight: 600; color: #166534; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+        <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M12 4v16m8-8H4"/>
+        </svg>
+        返済予定を追加
+    </h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end;">
+        <div>
+            <label style="font-size: 0.7rem; color: #166534; font-weight: 600; display: block; margin-bottom: 4px;">返済予定日</label>
+            <input type="date" id="new-payment-date" style="width: 100%; padding: 8px; border: 1px solid #86efac; border-radius: 6px; font-size: 0.875rem;">
+        </div>
+        <div>
+            <label style="font-size: 0.7rem; color: #166534; font-weight: 600; display: block; margin-bottom: 4px;">返済金額 (円)</label>
+            <input type="number" id="new-payment-amount" placeholder="100000" step="1000" style="width: 100%; padding: 8px; border: 1px solid #86efac; border-radius: 6px; font-size: 0.875rem;">
+        </div>
+        <button onclick="addPaymentPlan()" style="padding: 10px 16px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
+            ➕ 追加
+        </button>
+    </div>
+</div>
+
+
+</div>
+
 <script>
     // 実際の返済記録（年を修正: 2024→2025）
     const paymentHistory = [
@@ -704,3 +1243,6 @@
         }
     }, 60000);
 </script>
+
+</body>
+</html>
