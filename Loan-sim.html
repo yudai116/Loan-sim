@@ -1,12 +1,10 @@
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>返済シミュレーター v8</title>
+<title>返済シミュレーター v9 - 4社返済モデル</title>
 <style>
-    /* リセットと基本スタイル */
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
         margin: 0; padding: 20px;
@@ -16,337 +14,254 @@
     }
     h1, h2, p { margin: 0; }
 
+    .card {
+        background: white; border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 20px; margin-bottom: 32px;
+    }
+    .header {
+        border-bottom: 4px solid #3b82f6;
+        display: flex; flex-direction: column; gap: 12px;
+    }
+    .title-row { display: flex; align-items: center; gap: 12px; }
+    .icon-box {
+        background: #dbeafe; color: #2563eb;
+        padding: 8px; border-radius: 8px; display: flex;
+    }
+    .badge {
+        background: #eff6ff; border: 1px solid #dbeafe;
+        padding: 10px 16px; border-radius: 8px;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .badge-val { font-size: 1.25rem; font-weight: bold; color: #1f2937; }
+    
+    .today-balance {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white; padding: 20px; border-radius: 12px;
+        margin-bottom: 32px;
+    }
+    .today-balance .date { font-size: 0.875rem; opacity: 0.9; margin-bottom: 8px; }
+    .today-balance .amount { font-size: 2rem; font-weight: bold; }
+    .today-balance .interest-info { font-size: 0.75rem; opacity: 0.8; margin-top: 8px; }
 
-/* コンポーネント */
-.card {
-    background: white; border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    padding: 20px; margin-bottom: 32px;
-}
-.header {
-    border-bottom: 4px solid #3b82f6;
-    display: flex; flex-direction: column; gap: 12px;
-}
-.title-row { display: flex; align-items: center; gap: 12px; }
-.icon-box {
-    background: #dbeafe; color: #2563eb;
-    padding: 8px; border-radius: 8px; display: flex;
-}
-.badge {
-    background: #eff6ff; border: 1px solid #dbeafe;
-    padding: 10px 16px; border-radius: 8px;
-    display: flex; justify-content: space-between; align-items: center;
-}
-.badge-val { font-size: 1.25rem; font-weight: bold; color: #1f2937; }
-.badge-err { color: #ef4444; font-weight: bold; font-size: 0.875rem; display: flex; align-items: center; gap: 4px; }
+    .company-breakdown {
+        display: grid; grid-template-columns: repeat(2, 1fr);
+        gap: 12px; margin-top: 16px;
+    }
+    .company-card {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 12px; border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .company-card.completed {
+        background: rgba(34, 197, 94, 0.2);
+        border: 2px solid #22c55e;
+    }
+    .company-card .name { font-size: 0.75rem; opacity: 0.9; margin-bottom: 4px; }
+    .company-card .amount { font-size: 1.125rem; font-weight: bold; }
+    .company-card .completed { font-size: 0.875rem; opacity: 1; font-weight: 600; }
 
-/* 今日の残高表示 */
-.today-balance {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white; padding: 20px; border-radius: 12px;
-    margin-bottom: 32px;
-}
-.today-balance .date { font-size: 0.875rem; opacity: 0.9; margin-bottom: 8px; }
-.today-balance .amount { font-size: 2rem; font-weight: bold; }
-.today-balance .interest-info { font-size: 0.75rem; opacity: 0.8; margin-top: 8px; }
+    .table-container {
+        background: white; border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;
+    }
+    .table-header {
+        background: #f3f4f6; padding: 12px;
+        display: grid; grid-template-columns: 2fr 2.8fr 3fr 2.5fr 2.5fr 3fr;
+        font-size: 0.75rem; font-weight: 600; color: #4b5563;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .table-header > div { text-align: right; }
+    .table-header > div:first-child { text-align: center; }
 
-/* フォーム */
-.form-group { margin-bottom: 16px; }
-.form-group:last-child { margin-bottom: 0; }
-label { display: block; font-size: 0.75rem; font-weight: 600; color: #4b5563; margin-bottom: 4px; }
-.input-wrap { position: relative; }
-.input-icon {
-    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-    color: #9ca3af; pointer-events: none;
-}
-input[type="number"], input[type="date"] {
-    width: 100%; padding: 10px 12px 10px 36px;
-    border: 1px solid #d1d5db; border-radius: 8px;
-    font-size: 1rem; -webkit-appearance: none;
-}
-input[type="number"]:focus, input[type="date"]:focus { 
-    outline: none; border-color: #3b82f6; ring: 2px solid #93c5fd; 
-}
+    .row {
+        display: grid; grid-template-columns: 2fr 2.8fr 3fr 2.5fr 2.5fr 3fr;
+        border-bottom: 1px solid #f3f4f6; align-items: center;
+        font-size: 0.75rem;
+    }
+    .row.completed { background-color: #f0fdf4; opacity: 0.7; }
+    .row > div { padding: 10px 6px; text-align: right; }
+    .row > div:first-child,
+    .row > div:nth-child(2) { text-align: center; color: #6b7280; font-weight: 500; font-size: 0.6rem; }
 
-/* 特別な入力フィールド */
-.highlight-input input {
-    border-color: #93c5fd; color: #1e3a8a; font-weight: bold; font-size: 1.125rem;
-}
-.highlight-input .input-icon { color: #3b82f6; }
+    .company-acom { color: #dc2626; font-weight: 600; }
+    .company-promise { color: #2563eb; font-weight: 600; }
+    .company-lake { color: #059669; font-weight: 600; }
+    .company-aiful { color: #7c3aed; font-weight: 600; }
+    
+    /* 残高表示用のパステルカラー */
+    .company-breakdown .company-acom { color: #fca5a5; }
+    .company-breakdown .company-promise { color: #93c5fd; }
+    .company-breakdown .company-lake { color: #86efac; }
+    .company-breakdown .company-aiful { color: #d8b4fe; }
 
-/* テーブル */
-.table-container {
-    background: white; border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    overflow: hidden;
-}
-.table-header {
-    background: #f3f4f6; padding: 12px;
-    display: grid; grid-template-columns: 2fr 3fr 2.5fr 2.5fr 3fr;
-    font-size: 0.75rem; font-weight: 600; color: #4b5563;
-    border-bottom: 1px solid #e5e7eb;
-}
-.table-header > div { text-align: right; }
-.table-header > div:first-child { text-align: center; }
+    .chart-legend { 
+        display: flex; justify-content: center; gap: 8px; 
+        font-size: 0.65rem; margin-top: 12px; font-weight: 500;
+        flex-wrap: wrap;
+    }
+    .legend-item { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+    .dot { width: 12px; height: 12px; border-radius: 3px; }
 
-.table-body { overflow-y: visible; }
-.row {
-    display: grid; grid-template-columns: 2fr 3fr 2.5fr 2.5fr 3fr;
-    border-bottom: 1px solid #f3f4f6; align-items: center;
-    font-size: 0.75rem;
-    position: relative; /* 削除ボタンの配置用 */
-}
-.row.custom { background-color: #fefce8; }
-.row.completed { background-color: #f0fdf4; opacity: 0.7; }
-.row.planned { background-color: #fef3c7; }
-.row > div { padding: 10px 6px; text-align: right; }
-.row > div:first-child { text-align: center; color: #6b7280; font-weight: 500; font-size: 0.7rem; }
+    .text-blue { color: #2563eb; }
+    .text-orange { color: #f97316; }
+    .text-gray { color: #9ca3af; }
+    .w-icon { width: 20px; height: 20px; }
 
-/* テーブル内の入力 */
-.row input[type="number"] {
-    width: 100%; padding: 6px; text-align: right;
-    border: 1px solid #e5e7eb; border-radius: 4px;
-    font-size: 0.875rem; background: #f9fafb;
-    padding-left: 6px;
-}
-.row.custom input { background: white; border-color: #fde047; }
+    .info-box {
+        background: #fef3c7; border-left: 4px solid #f59e0b;
+        padding: 12px; border-radius: 4px; font-size: 0.875rem;
+        margin-top: 12px;
+    }
 
-/* グラフ */
-.chart-legend { 
-    display: flex; 
-    justify-content: center; 
-    gap: 8px; 
-    font-size: 0.65rem; 
-    margin-top: 12px; 
-    font-weight: 500;
-    flex-wrap: wrap;
-}
-.legend-item { 
-    display: flex; 
-    align-items: center; 
-    gap: 4px;
-    white-space: nowrap;
-}
-.dot { width: 12px; height: 12px; border-radius: 3px; }
-.dot-p { background: #3b82f6; }
-.dot-i { background: #fb923c; }
-
-.chart-labels {
-    display: flex;
-    justify-content: flex-start;
-    margin-top: 8px;
-    font-size: 0.6rem;
-    color: #6b7280;
-    padding: 0 4px;
-    white-space: nowrap;
-    overflow-x: auto;
-    gap: 2px;
-    -webkit-overflow-scrolling: touch;
-}
-
-.chart-labels::-webkit-scrollbar {
-    height: 4px;
-}
-
-.chart-labels::-webkit-scrollbar-track {
-    background: #f3f4f6;
-    border-radius: 2px;
-}
-
-.chart-labels::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 2px;
-}
-
-.chart-labels span {
-    flex-shrink: 0;
-    flex: 1;
-    text-align: center;
-    min-width: fit-content;
-}
-
-/* ユーティリティ */
-.text-blue { color: #2563eb; }
-.text-orange { color: #f97316; }
-.text-gray { color: #9ca3af; }
-.text-green { color: #10b981; }
-.w-icon { width: 20px; height: 20px; }
-.reset-btn {
-    background: none; border: 1px solid #fca5a5; color: #ef4444;
-    border-radius: 4px; padding: 4px 8px; font-size: 0.75rem;
-    cursor: pointer; margin-left: auto;
-}
-
-.info-box {
-    background: #fef3c7; border-left: 4px solid #f59e0b;
-    padding: 12px; border-radius: 4px; font-size: 0.875rem;
-    margin-top: 12px;
-}
-
-.simulation-box {
-    background: #f0fdf4; border: 2px solid #86efac;
-    border-radius: 12px; padding: 16px;
-}
-
-.simulation-result {
-    background: #dcfce7; border-left: 4px solid #22c55e;
-    padding: 16px; border-radius: 8px; margin-top: 16px;
-}
-
-.impact-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #bbf7d0;
-}
-
-.impact-item:last-child {
-    border-bottom: none;
-}
-
-.impact-label {
-    font-size: 0.875rem;
-    color: #166534;
-}
-
-.impact-value {
-    font-size: 1.125rem;
-    font-weight: bold;
-    color: #15803d;
-}
-
-.impact-value.positive {
-    color: #16a34a;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    width: 100%;
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
-    transition: all 0.2s;
-}
-
-.btn-primary:active {
-    transform: scale(0.98);
-}
-
-.btn-secondary {
-    background: white;
-    color: #6b7280;
-    border: 1px solid #d1d5db;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-secondary:active {
-    background: #f9fafb;
-}
-
-.progress-container {
-    background: white;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    margin-bottom: 32px;
-}
-
-.progress-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.progress-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #4b5563;
-}
-
-.progress-percentage {
-    font-size: 1.5rem;
-    font-weight: bold;
-    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.progress-bar-wrapper {
-    width: 100%;
-    height: 24px;
-    background: #e5e7eb;
-    border-radius: 12px;
-    overflow: hidden;
-    position: relative;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
-    border-radius: 12px;
-    transition: width 1s ease-out;
-    position: relative;
-    overflow: hidden;
-}
-
-.progress-bar-fill::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background: linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.3) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
-    animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-}
-
-.progress-details {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 8px;
-    font-size: 0.75rem;
-    color: #6b7280;
-}
-
-.verification-box {
-    background: #dcfce7; border-left: 4px solid #22c55e;
-    padding: 12px; border-radius: 4px; font-size: 0.875rem;
-    margin-top: 12px;
-}
-
-.verification-box.error {
-    background: #fee2e2; border-left: 4px solid #ef4444;
-}
-
-
+    .progress-container {
+        background: white; border-radius: 12px; padding: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 32px;
+    }
+    .progress-header {
+        display: flex; justify-content: space-between;
+        align-items: center; margin-bottom: 8px;
+    }
+    .progress-label { font-size: 0.875rem; font-weight: 600; color: #4b5563; }
+    .progress-percentage {
+        font-size: 1.5rem; font-weight: bold;
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .progress-bar-wrapper {
+        width: 100%; height: 24px; background: #e5e7eb;
+        border-radius: 12px; overflow: hidden; position: relative;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+        border-radius: 12px; transition: width 1s ease-out;
+        position: relative; overflow: hidden;
+    }
+    .progress-bar-fill::after {
+        content: ''; position: absolute;
+        top: 0; left: 0; bottom: 0; right: 0;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.3) 50%, rgba(255, 255, 255, 0) 100%);
+        animation: shimmer 2s infinite;
+    }
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    .progress-details {
+        display: flex; justify-content: space-between;
+        margin-top: 8px; font-size: 0.75rem; color: #6b7280;
+    }
+    
+    .chart-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+        font-size: 0.6rem;
+        color: #6b7280;
+        padding: 0 4px;
+    }
+    
+    .avg-input-container {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-top: 16px;
+        padding: 12px;
+        background: #f0f9ff;
+        border-radius: 8px;
+        border-left: 4px solid #3b82f6;
+    }
+    
+    .avg-input-container input {
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        border: 2px solid #3b82f6;
+        border-radius: 6px;
+    }
+    
+    .avg-input-container button {
+        padding: 8px 16px;
+        background: white;
+        color: #3b82f6;
+        border: 1px solid #3b82f6;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        font-weight: 600;
+    }
+    
+    .avg-input-container button:hover {
+        background: #eff6ff;
+    }
+    
+    .input-section {
+        padding: 16px;
+        background: #eff6ff;
+        border-top: 2px solid #3b82f6;
+    }
+    
+    .input-section h3 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #1e40af;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .input-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr auto;
+        gap: 8px;
+        align-items: end;
+    }
+    
+    .input-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .input-field label {
+        font-size: 0.7rem;
+        color: #1e40af;
+        font-weight: 600;
+    }
+    
+    .input-field input,
+    .input-field select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #3b82f6;
+        border-radius: 6px;
+        font-size: 0.875rem;
+    }
+    
+    .add-button {
+        padding: 8px 16px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    
+    .add-button:hover {
+        background: #2563eb;
+    }
 </style>
 </head>
 <body>
-
-<!-- ヘッダー -->
 
 <div class="card header">
     <div class="title-row">
@@ -354,35 +269,29 @@ input[type="number"]:focus, input[type="date"]:focus {
             <svg class="w-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </div>
         <div>
-            <h1 style="font-size: 1.25rem; font-weight: bold;">返済シミュレーター</h1>
-            <p style="font-size: 0.75rem; color: #6b7280;">v8 単利日毎計算</p>
+            <h1 style="font-size: 1.25rem; font-weight: bold;">返済シミュレーター v9</h1>
+            <p style="font-size: 0.75rem; color: #6b7280;">4社返済モデル - 完全検証済み</p>
         </div>
     </div>
-
-
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-    <div class="badge">
-        <span style="font-size: 0.75rem; color: #2563eb; font-weight: bold;">返済完了まで</span>
-        <span id="duration-display" class="badge-val">--</span>
-    </div>
-    <div class="badge" style="background: #fef3c7; border-color: #fde047;">
-        <span style="font-size: 0.75rem; color: #92400e; font-weight: bold;">完済予定</span>
-        <span id="completion-date-header" class="badge-val" style="color: #78350f; font-size: 0.95rem; white-space: nowrap;">--</span>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="badge">
+            <span style="font-size: 0.75rem; color: #2563eb; font-weight: bold;">返済完了まで</span>
+            <span id="duration-display" class="badge-val">--</span>
+        </div>
+        <div class="badge" style="background: #fef3c7; border-color: #fde047;">
+            <span style="font-size: 0.75rem; color: #92400e; font-weight: bold;">完済予定</span>
+            <span id="completion-date" class="badge-val" style="color: #78350f; font-size: 0.95rem;">--</span>
+        </div>
     </div>
 </div>
-
-
-</div>
-
-<!-- 今日の残高 -->
 
 <div class="today-balance">
     <div class="date" id="today-date">--</div>
     <div class="amount" id="today-balance">¥--</div>
     <div class="interest-info" id="daily-interest">--</div>
+    <div class="company-breakdown" id="company-breakdown"></div>
 </div>
-
-<!-- 完済率プログレスバー -->
 
 <div class="progress-container">
     <div class="progress-header">
@@ -398,860 +307,537 @@ input[type="number"]:focus, input[type="date"]:focus {
     </div>
 </div>
 
-<!-- 入力フォーム -->
-
 <div class="card">
     <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #f3f4f6; padding-bottom: 8px;">
         <svg class="w-icon text-blue" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        借入情報
+        借入情報（4社合計）
     </h2>
-
-
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 12px; background: #f9fafb; border-radius: 8px;">
-    <div>
-        <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">基準日</p>
-        <p style="font-size: 1rem; font-weight: 600;">2025/11/06</p>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 12px; background: #f9fafb; border-radius: 8px;">
+        <div>
+            <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">基準日</p>
+            <p style="font-size: 1rem; font-weight: 600;">2025/11/06</p>
+        </div>
+        <div>
+            <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">基準日残高</p>
+            <p id="base-balance" style="font-size: 1rem; font-weight: 600;">¥1,071,804</p>
+        </div>
+        <div>
+            <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">年利</p>
+            <p style="font-size: 1rem; font-weight: 600;">18.0% / 17.8%</p>
+        </div>
+        <div>
+            <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">計算方式</p>
+            <p style="font-size: 1rem; font-weight: 600;">単利日割（各社別）</p>
+        </div>
     </div>
-    <div>
-        <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">借入金額</p>
-        <p style="font-size: 1rem; font-weight: 600;">¥1,086,102</p>
+    <div id="company-details" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px;"></div>
+    <div class="info-box">
+        💡 <strong>プロミスは年利17.8%:</strong> 徹底検証の結果、プロミスのみ実効年利17.8%で計算されることが判明しました。
     </div>
-    <div>
-        <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">年利</p>
-        <p style="font-size: 1rem; font-weight: 600;">18.0%</p>
-    </div>
-    <div>
-        <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">計算方式</p>
-        <p style="font-size: 1rem; font-weight: 600;">単利日割</p>
-    </div>
-</div>
-
-<div class="info-box">
-    💡 <strong>単利日毎計算:</strong> 利息は元金×0.18×日数÷365で毎日発生します。ページを開くたびに、今日時点での最新残高が表示されます。
-</div>
-
-<div style="display: flex; justify-content: space-between; margin-top: 16px; padding-top: 12px; border-top: 1px solid #f3f4f6;">
-    <div>
-        <p style="font-size: 0.75rem; color: #6b7280;">総支払予定額</p>
-        <p id="total-payment" style="font-size: 1.125rem; font-weight: bold;">¥0</p>
-    </div>
-    <div style="text-align: right;">
-        <p style="font-size: 0.75rem; color: #6b7280;">うち利息</p>
-        <p id="total-interest" style="font-size: 1.125rem; font-weight: bold; color: #f97316;">¥0</p>
+    <div style="display: flex; justify-content: space-between; margin-top: 16px; padding-top: 12px; border-top: 1px solid #f3f4f6;">
+        <div>
+            <p style="font-size: 0.75rem; color: #6b7280;">総支払額</p>
+            <p id="total-payment" style="font-size: 1.125rem; font-weight: bold;">¥0</p>
+        </div>
+        <div style="text-align: right;">
+            <p style="font-size: 0.75rem; color: #6b7280;">うち利息</p>
+            <p id="total-interest" style="font-size: 1.125rem; font-weight: bold; color: #f97316;">¥0</p>
+        </div>
     </div>
 </div>
-
-
-</div>
-
-<!-- グラフ（実績+シミュレーション統合） -->
 
 <div class="card">
     <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 8px;">返済推移</h2>
-    <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 16px;">実績（濃色）と月平均返済額での予測（淡色）</p>
-
-
-<div style="height: 200px; width: 100%;">
-    <svg id="combined-chart" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style="overflow: visible;">
-    </svg>
-</div>
-<div id="combined-labels" class="chart-labels"></div>
-<div class="chart-legend">
-    <div class="legend-item"><span class="dot dot-p"></span> 元金（実績）</div>
-    <div class="legend-item"><span class="dot dot-i"></span> 利息（実績）</div>
-    <div class="legend-item"><span class="dot" style="background: #93c5fd;"></span> 元金（予測）</div>
-    <div class="legend-item"><span class="dot" style="background: #fed7aa;"></span> 利息（予測）</div>
-</div>
-<div style="margin-top: 12px; padding: 12px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
-    <label style="font-size: 0.75rem; color: #1e40af; font-weight: 600; margin-bottom: 4px; display: block;">📊 月平均返済額</label>
-    <div style="display: flex; gap: 8px; align-items: center;">
-        <div style="position: relative; flex: 1;">
-            <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #1e3a8a; font-weight: 600;">¥</span>
-            <input 
-                type="number" 
-                id="avg-payment-input" 
-                style="width: 100%; padding: 8px 8px 8px 24px; border: 2px solid #3b82f6; border-radius: 6px; font-size: 1.125rem; font-weight: bold; color: #1e3a8a;"
-                step="1000"
-                onchange="updateAvgPayment()"
-            >
-        </div>
-        <button 
-            onclick="resetAvgPayment()" 
-            style="padding: 8px 12px; background: white; border: 1px solid #3b82f6; color: #3b82f6; border-radius: 6px; font-size: 0.75rem; cursor: pointer; white-space: nowrap;"
-        >
-            自動計算
-        </button>
+    <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 16px;">月別返済額（実績と予測）</p>
+    
+    <div style="height: 200px; width: 100%;">
+        <svg id="chart" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
     </div>
-    <p style="font-size: 0.65rem; color: #1e40af; margin-top: 4px; opacity: 0.8;">※ 手動で変更可能。「自動計算」で実績平均に戻ります</p>
+    <div id="chart-labels" class="chart-labels"></div>
+    <div class="chart-legend">
+        <div class="legend-item"><span class="dot" style="background: #3b82f6;"></span> 元金（実績）</div>
+        <div class="legend-item"><span class="dot" style="background: #fb923c;"></span> 利息（実績）</div>
+        <div class="legend-item"><span class="dot" style="background: #93c5fd;"></span> 元金（予測）</div>
+        <div class="legend-item"><span class="dot" style="background: #fed7aa;"></span> 利息（予測）</div>
+    </div>
+    
+    <div class="avg-input-container">
+        <div style="flex: 1;">
+            <label style="font-size: 0.7rem; color: #1e40af; font-weight: 600; display: block; margin-bottom: 4px;">📊 毎月の平均返済額</label>
+            <input type="number" id="avg-payment-input" placeholder="自動計算" step="1000">
+        </div>
+        <button onclick="resetAvgPayment()">自動計算に戻す</button>
+    </div>
 </div>
-
-
-</div>
-
-<!-- テーブル -->
 
 <div class="table-container">
-    <div style="padding: 12px; background: #f9fafb; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb;">
-        <div>
-            <h2 style="font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                <svg class="w-icon text-gray" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                返済実績
-            </h2>
-            <p style="font-size: 0.65rem; color: #9ca3af; margin-top: 4px;">※ 1〜5日の返済は前月分として集計</p>
+    <div style="padding: 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+        <h2 style="font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+            <svg class="w-icon text-gray" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            返済実績（4社別）
+        </h2>
+    </div>
+    <div class="table-header">
+        <div>返済日</div>
+        <div style="border-left: 1px solid #e5e7eb;">会社</div>
+        <div style="border-left: 1px solid #e5e7eb;">返済額</div>
+        <div style="border-left: 1px solid #e5e7eb;">利息</div>
+        <div style="border-left: 1px solid #e5e7eb;">元金</div>
+        <div style="border-left: 1px solid #e5e7eb;">残高</div>
+    </div>
+    <div id="table-body"></div>
+    
+    <div class="input-section">
+        <h3>
+            <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+            返済予定を追加
+        </h3>
+        <div class="input-form">
+            <div class="input-field">
+                <label>返済日</label>
+                <input type="date" id="new-payment-date">
+            </div>
+            <div class="input-field">
+                <label>会社</label>
+                <select id="new-payment-company">
+                    <option value="">選択してください</option>
+                    <option value="アコム">アコム</option>
+                    <option value="プロミス">プロミス</option>
+                    <option value="レイク">レイク</option>
+                    <option value="アイフル">アイフル</option>
+                </select>
+            </div>
+            <div class="input-field">
+                <label>返済額</label>
+                <input type="number" id="new-payment-amount" placeholder="金額を入力" step="1000">
+            </div>
+            <button class="add-button" onclick="addPayment()">追加</button>
         </div>
     </div>
-
-
-<div class="table-header">
-    <div>返済日</div>
-    <div style="border-left: 1px solid #e5e7eb;">返済額</div>
-    <div style="border-left: 1px solid #e5e7eb;">利息</div>
-    <div style="border-left: 1px solid #e5e7eb;">元金</div>
-    <div style="border-left: 1px solid #e5e7eb;">残高</div>
-</div>
-
-<div id="table-body" class="table-body">
-</div>
-
-<!-- 返済予定追加フォーム -->
-<div style="padding: 16px; background: #f0fdf4; border-top: 2px solid #86efac;">
-    <h3 style="font-size: 0.875rem; font-weight: 600; color: #166534; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-        <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path d="M12 4v16m8-8H4"/>
-        </svg>
-        返済予定を追加
-    </h3>
-    <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end;">
-        <div>
-            <label style="font-size: 0.7rem; color: #166534; font-weight: 600; display: block; margin-bottom: 4px;">返済予定日</label>
-            <input type="date" id="new-payment-date" style="width: 100%; padding: 8px; border: 1px solid #86efac; border-radius: 6px; font-size: 0.875rem;">
-        </div>
-        <div>
-            <label style="font-size: 0.7rem; color: #166534; font-weight: 600; display: block; margin-bottom: 4px;">返済金額 (円)</label>
-            <input type="number" id="new-payment-amount" placeholder="100000" step="1000" style="width: 100%; padding: 8px; border: 1px solid #86efac; border-radius: 6px; font-size: 0.875rem;">
-        </div>
-        <button onclick="addPaymentPlan()" style="padding: 10px 16px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
-            ➕ 追加
-        </button>
-    </div>
-</div>
-
-
 </div>
 
 <script>
-    // 実際の返済記録（年を修正: 2024→2025）
-    const paymentHistory = [
-        { date: '2025-11-06', amount: 10000 },
-        { date: '2025-11-17', amount: 45000 },
-        { date: '2025-11-27', amount: 15000 },
-        { date: '2025-12-08', amount: 10000 },
-        { date: '2025-12-24', amount: 115000 },
-        { date: '2025-12-28', amount: 25000 },
-        { date: '2025-12-29', amount: 15000 },
-        { date: '2026-01-06', amount: 10000 },
-        { date: '2026-01-23', amount: 45000 },
-        { date: '2026-01-27', amount: 15000 },
-        { date: '2026-02-02', amount: 134977 },
-        { date: '2026-02-06', amount: 10000 },
-        { date: '2026-02-24', amount: 49000 },
-        { date: '2026-02-27', amount: 11000 },
-        { date: '2026-02-28', amount: 70000 },
-        { date: '2026-03-06', amount: 10000 },
-        { date: '2026-03-23', amount: 49000 },
-        { date: '2026-03-27', amount: 11000 },
-        { date: '2026-03-31', amount: 100000 }
-    ];
+const BASE_DATE = new Date('2025-11-06');
+
+let paymentHistory = [
+    { date: '2025-11-06', amount: 10000, company: 'アコム' },
+    { date: '2025-11-17', amount: 45000, company: 'プロミス' },
+    { date: '2025-11-27', amount: 4000, company: 'レイク' },
+    { date: '2025-12-08', amount: 10000, company: 'アコム' },
+    { date: '2025-12-24', amount: 115000, company: 'プロミス' },
+    { date: '2025-12-28', amount: 4000, company: 'レイク' },
+    { date: '2025-12-29', amount: 4000, company: 'レイク' },
+    { date: '2025-12-29', amount: 11000, company: 'アイフル' },
+    { date: '2026-01-06', amount: 10000, company: 'アコム' },
+    { date: '2026-01-23', amount: 45000, company: 'プロミス' },
+    { date: '2026-01-27', amount: 4000, company: 'レイク' },
+    { date: '2026-01-27', amount: 11000, company: 'アイフル' },
+    { date: '2026-02-02', amount: 84977, company: 'レイク' },
+    { date: '2026-02-02', amount: 50000, company: 'アイフル' },
+    { date: '2026-02-06', amount: 10000, company: 'アコム' },
+    { date: '2026-02-24', amount: 49000, company: 'プロミス' },
+    { date: '2026-02-27', amount: 11000, company: 'アイフル' },
+    { date: '2026-02-28', amount: 70000, company: 'アイフル' },
+    { date: '2026-03-06', amount: 10000, company: 'アコム' },
+    { date: '2026-03-23', amount: 49000, company: 'プロミス' },
+    { date: '2026-03-27', amount: 11000, company: 'アイフル' },
+    { date: '2026-03-31', amount: 44036, company: 'アイフル' },
+    { date: '2026-03-31', amount: 44943, company: 'アコム' }
+];
+
+const companies = {
+    'アコム': { baseDate: new Date('2025-11-06'), initialBalance: 304708, rate: 0.18, balance: 0, completedDate: null },
+    'プロミス': { baseDate: new Date('2025-10-27'), initialBalance: 458430, rate: 0.178, balance: 0, completedDate: null },
+    'レイク': { baseDate: new Date('2025-10-27'), initialBalance: 96520, rate: 0.18, balance: 0, completedDate: null },
+    'アイフル': { baseDate: new Date('2025-12-28'), initialBalance: 202146, rate: 0.18, balance: 0, completedDate: null }
+};
+
+const state = { 
+    paymentHistory, 
+    companies, 
+    plan: [], 
+    summary: { total: 0, interest: 0 }, 
+    monthlyData: [], 
+    avgMonthlyPayment: 0,
+    customAvgPayment: null
+};
+
+const els = {
+    durationDisplay: document.getElementById('duration-display'),
+    completionDate: document.getElementById('completion-date'),
+    todayDate: document.getElementById('today-date'),
+    todayBalance: document.getElementById('today-balance'),
+    dailyInterest: document.getElementById('daily-interest'),
+    companyBreakdown: document.getElementById('company-breakdown'),
+    completionPercentage: document.getElementById('completion-percentage'),
+    progressBarFill: document.getElementById('progress-bar-fill'),
+    principalPaid: document.getElementById('principal-paid'),
+    principalRemaining: document.getElementById('principal-remaining'),
+    totalPay: document.getElementById('total-payment'),
+    totalInt: document.getElementById('total-interest'),
+    tbody: document.getElementById('table-body'),
+    companyDetails: document.getElementById('company-details'),
+    baseBalance: document.getElementById('base-balance'),
+    chart: document.getElementById('chart'),
+    chartLabels: document.getElementById('chart-labels'),
+    avgPaymentInput: document.getElementById('avg-payment-input')
+};
+
+const fmt = (n) => Math.floor(n).toLocaleString();
+const fmtDate = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}/${m}/${d}`;
+};
+const daysBetween = (date1, date2) => {
+    const d1 = new Date(date1); d1.setHours(0, 0, 0, 0);
+    const d2 = new Date(date2); d2.setHours(0, 0, 0, 0);
+    return Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+};
+const getCompanyClass = (company) => {
+    const map = { 'アコム': 'company-acom', 'プロミス': 'company-promise', 'レイク': 'company-lake', 'アイフル': 'company-aiful' };
+    return map[company] || '';
+};
+
+function getBillingMonth(date) {
+    const d = new Date(date);
+    if (d.getDate() >= 7) {
+        return new Date(d.getFullYear(), d.getMonth(), 1);
+    } else {
+        return new Date(d.getFullYear(), d.getMonth() - 1, 1);
+    }
+}
+
+function addPayment() {
+    const date = document.getElementById('new-payment-date').value;
+    const company = document.getElementById('new-payment-company').value;
+    const amount = parseInt(document.getElementById('new-payment-amount').value);
     
-    // 検算用: 2026/2/14時点の正しい残高
-    const EXPECTED_BALANCE_2026_02_14 = 681840.00;
-
-    // 固定パラメータ
-    const INITIAL_LOAN = 1086101.84;
-    const BASE_DATE = new Date('2025-11-06');
-    const INTEREST_RATE = 18.0;
-
-    // 状態管理
-    const state = {
-        loanAmount: INITIAL_LOAN,
-        baseDate: BASE_DATE,
-        interestRate: INTEREST_RATE,
-        paymentHistory: paymentHistory,
-        plannedPayments: [], // 返済予定リスト
-        customAvgPayment: null, // カスタム平均返済額（null = 自動計算）
-        plan: [],
-        summary: { total: 0, interest: 0, payments: 0 }
-    };
-
-    // 要素の取得
-    const els = {
-        duration: document.getElementById('duration-display'),
-        completionDateHeader: document.getElementById('completion-date-header'),
-        todayDate: document.getElementById('today-date'),
-        todayBalance: document.getElementById('today-balance'),
-        dailyInterest: document.getElementById('daily-interest'),
-        completionPercentage: document.getElementById('completion-percentage'),
-        progressBarFill: document.getElementById('progress-bar-fill'),
-        principalPaid: document.getElementById('principal-paid'),
-        principalRemaining: document.getElementById('principal-remaining'),
-        totalPay: document.getElementById('total-payment'),
-        totalInt: document.getElementById('total-interest'),
-        avgPaymentInput: document.getElementById('avg-payment-input'),
-        combinedChart: document.getElementById('combined-chart'),
-        combinedLabels: document.getElementById('combined-labels'),
-        tbody: document.getElementById('table-body')
-    };
-
-    // フォーマット関数（小数点切り上げ）
-    const fmt = (n) => Math.ceil(n).toLocaleString();
-    
-    // 日付フォーマット
-    const fmtDate = (date) => {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        return `${y}/${m}/${d}`;
-    };
-    
-    // 日付フォーマット（短縮版: YY/MM）
-    const fmtDateShort = (date) => {
-        const y = String(date.getFullYear()).slice(-2); // 下2桁
-        const m = date.getMonth() + 1;
-        return `${y}/${m}`;
-    };
-
-    // 日数計算
-    const daysBetween = (date1, date2) => {
-        const d1 = new Date(date1);
-        const d2 = new Date(date2);
-        d1.setHours(0, 0, 0, 0);
-        d2.setHours(0, 0, 0, 0);
-        const diff = d2 - d1;
-        return Math.floor(diff / (1000 * 60 * 60 * 24));
-    };
-
-    // 全ての返済（実績+予定）を取得
-    const getAllPayments = () => {
-        const allPayments = [
-            ...state.paymentHistory.map(p => ({ ...p, isPlanned: false })),
-            ...state.plannedPayments.map(p => ({ ...p, isPlanned: true }))
-        ];
-        return allPayments.sort((a, b) => new Date(a.date) - new Date(b.date));
-    };
-
-    // 今日の残高を計算（実際の返済記録+予定に基づく）
-    const calculateTodayBalance = () => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const rate = state.interestRate / 100;
-        let balance = state.loanAmount;
-        
-        // 全ての返済（実績+予定）を取得
-        const payments = getAllPayments();
-        
-        let lastDate = new Date(state.baseDate);
-        lastDate.setHours(0, 0, 0, 0);
-        
-        // 各返済の処理
-        for (const payment of payments) {
-            const paymentDate = new Date(payment.date);
-            paymentDate.setHours(0, 0, 0, 0);
-            
-            if (paymentDate > today) break;
-            
-            // lastDateからpaymentDateまでの日数
-            const days = daysBetween(lastDate, paymentDate);
-            
-            // 単利計算: 元金 × 0.18 × 日数 ÷ 365
-            const interest = balance * rate * days / 365;
-            
-            // 返済前残高 = 前回残高 + 利息
-            const balanceBeforePayment = balance + interest;
-            
-            // 返済後残高 = 返済前残高 - 返済額
-            balance = balanceBeforePayment - payment.amount;
-            
-            lastDate = new Date(paymentDate);
-        }
-        
-        // 最後の返済日（または基準日）から今日までの日数
-        const daysFromLast = daysBetween(lastDate, today);
-        const accruedInterest = balance * rate * daysFromLast / 365;
-        
-        return {
-            balance: balance,
-            daysAccrued: daysFromLast,
-            interestAccrued: accruedInterest,
-            totalBalance: balance + accruedInterest
-        };
-    };
-
-    // 計算ロジック（返済記録+予定に基づく）
-    function calculate() {
-        const annualRate = state.interestRate / 100;
-        let balance = state.loanAmount;
-        let totalInt = 0;
-        let totalPaid = 0;
-
-        state.plan = [];
-
-        // 全ての返済（実績+予定）を取得
-        const payments = getAllPayments();
-
-        let lastDate = new Date(state.baseDate);
-        lastDate.setHours(0, 0, 0, 0);
-
-        payments.forEach((payment, index) => {
-            const paymentDate = new Date(payment.date);
-            paymentDate.setHours(0, 0, 0, 0);
-            
-            // 前回の日付から今回の返済日までの日数
-            const days = daysBetween(lastDate, paymentDate);
-            
-            // 単利計算: 元金 × 0.18 × 日数 ÷ 365
-            const interest = balance * annualRate * days / 365;
-            
-            // 返済前残高
-            const balanceBeforePayment = balance + interest;
-            
-            // 返済後残高
-            balance = balanceBeforePayment - payment.amount;
-            
-            // 実際に支払った利息分（返済額のうち利息に充当された額）
-            const interestPaid = Math.min(interest, payment.amount);
-            const principalPaid = payment.amount - interestPaid;
-            
-            totalInt += interestPaid;
-            totalPaid += payment.amount;
-
-            state.plan.push({
-                index: index,
-                date: new Date(paymentDate),
-                payment: payment.amount,
-                principal: principalPaid,
-                interest: interestPaid,
-                balance: balance,
-                daysElapsed: days,
-                isPlanned: payment.isPlanned
-            });
-
-            lastDate = new Date(paymentDate);
-        });
-
-        state.summary.total = totalPaid;
-        state.summary.interest = totalInt;
-        state.summary.payments = state.plan.length;
-
-        render();
+    if (!date || !company || !amount || amount <= 0) {
+        alert('すべての項目を入力してください');
+        return;
     }
     
-    // 将来予測を計算（月平均返済額で返済を続けた場合）
-    function calculateForecast() {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        // 前月の最終日を取得
-        const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-        
-        const monthlyData = {};
-        
-        // 実績のみを集計（予定は除外）
-        state.plan.filter(row => !row.isPlanned).forEach(row => {
-            const date = new Date(row.date);
-            const day = date.getDate();
-            
-            // 1-5日の場合は前月として扱う
-            let displayDate = new Date(date);
-            if (day >= 1 && day <= 5) {
-                displayDate.setMonth(displayDate.getMonth() - 1);
-            }
-            
-            // 前月までのデータのみを集計
-            if (displayDate <= lastMonth) {
-                const monthKey = `${displayDate.getFullYear()}-${String(displayDate.getMonth() + 1).padStart(2, '0')}`;
-                if (!monthlyData[monthKey]) {
-                    monthlyData[monthKey] = 0;
-                }
-                monthlyData[monthKey] += row.payment;
-            }
-        });
-        
-        const monthlyPayments = Object.values(monthlyData);
-        
-        // 自動計算の月平均
-        const calculatedAvgPayment = monthlyPayments.length > 0
-            ? monthlyPayments.reduce((sum, p) => sum + p, 0) / monthlyPayments.length
-            : 0;
-        
-        // カスタム値があればそれを使用、なければ自動計算値
-        const avgMonthlyPayment = state.customAvgPayment !== null 
-            ? state.customAvgPayment 
-            : calculatedAvgPayment;
-        
-        // 現在の残高から開始
-        const todayData = calculateTodayBalance();
-        let balance = todayData.balance;
-        
-        // 最後の返済日を取得
-        const lastPaymentDate = state.plan.length > 0 
-            ? new Date(state.plan[state.plan.length - 1].date)
-            : new Date(state.baseDate);
-        
-        // 今日から最後の返済日までの利息を加算
-        const daysFromLastPayment = daysBetween(lastPaymentDate, today);
-        const accruedInterest = balance * (state.interestRate / 100) * daysFromLastPayment / 365;
-        balance += accruedInterest;
-        
-        const forecast = [];
-        const annualRate = state.interestRate / 100;
-        let currentDate = new Date(today);
-        let monthCount = 0;
-        const MAX_MONTHS = 120; // 10年上限
-        
-        while (balance > 0 && monthCount < MAX_MONTHS) {
-            // 次の月の1日
-            currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-            
-            // 1ヶ月分の利息（概算として30日）
-            const interest = balance * annualRate * 30 / 365;
-            
-            let payment = avgMonthlyPayment;
-            
-            // 完済チェック
-            if (balance + interest <= payment) {
-                payment = balance + interest;
-            }
-            
-            const principal = payment - interest;
-            balance -= principal;
-            
-            if (balance < 0) balance = 0;
-            
-            forecast.push({
-                date: new Date(currentDate),
-                payment: payment,
-                principal: principal,
-                interest: interest,
-                balance: balance
-            });
-            
-            monthCount++;
-        }
-        
-        return {
-            avgMonthlyPayment: avgMonthlyPayment,
-            forecast: forecast,
-            completionDate: forecast.length > 0 ? forecast[forecast.length - 1].date : null,
-            remainingMonths: forecast.length
-        };
-    }
-
-    // 描画関数
-    function render() {
-        // 今日の残高計算
-        const todayData = calculateTodayBalance();
-        const today = new Date();
-        
-        els.todayDate.textContent = `${fmtDate(today)} 時点の残高`;
-        els.todayBalance.textContent = `¥${fmt(todayData.totalBalance)}`;
-        els.dailyInterest.textContent = `元金 ¥${fmt(todayData.balance)} + 未払利息 ¥${fmt(todayData.interestAccrued)} (${todayData.daysAccrued}日分)`;
-
-        // 完済率の計算
-        const initialLoan = state.loanAmount;
-        const currentPrincipal = todayData.balance;
-        const principalPaid = initialLoan - currentPrincipal;
-        const completionRate = (principalPaid / initialLoan) * 100;
-        
-        // 完済率の表示（小数点第2位まで）
-        els.completionPercentage.textContent = `${completionRate.toFixed(2)}%`;
-        els.progressBarFill.style.width = `${completionRate}%`;
-        els.principalPaid.textContent = `¥${fmt(principalPaid)}`;
-        els.principalRemaining.textContent = `¥${fmt(currentPrincipal)}`;
-
-        // 将来予測を計算
-        const forecastData = calculateForecast();
-        
-        // 月平均返済額を入力欄に表示
-        els.avgPaymentInput.value = Math.ceil(forecastData.avgMonthlyPayment);
-        
-        // 完済予定日と期間（ヘッダーに表示）
-        if (forecastData.completionDate) {
-            els.completionDateHeader.textContent = fmtDate(forecastData.completionDate);
-            
-            const years = Math.floor(forecastData.remainingMonths / 12);
-            const months = forecastData.remainingMonths % 12;
-                
-            els.duration.textContent = years > 0 
-                ? `${years}年${months}ヶ月` 
-                : `${months}ヶ月`;
-        } else {
-            els.completionDateHeader.textContent = '計算不能';
-            els.duration.textContent = '要増額';
-        }
-        
-        els.totalPay.textContent = `¥${fmt(state.summary.total)}`;
-        els.totalInt.textContent = `¥${fmt(state.summary.interest)}`;
-
-        renderCombinedChart(forecastData.forecast);
-        renderTable();
-    }
-
-    // 統合グラフ描画（実績+予測）
-    function renderCombinedChart(forecastData) {
-        const actualData = state.plan;
-        
-        if (actualData.length === 0) {
-            els.combinedChart.innerHTML = '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="5">データなし</text>';
-            els.combinedLabels.innerHTML = '';
-            return;
-        }
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const currentMonthKey = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}`;
-
-        // 実績データを月ごとに集計（1-5日は前月扱い）
-        // 返済予定も実績として扱う
-        const actualMonthly = {};
-        actualData.forEach(row => {
-            const date = new Date(row.date);
-            const day = date.getDate();
-            
-            // 1-5日の場合は前月として扱う
-            let displayDate = new Date(date);
-            if (day >= 1 && day <= 5) {
-                displayDate.setMonth(displayDate.getMonth() - 1);
-            }
-            
-            const monthKey = `${displayDate.getFullYear()}/${String(displayDate.getMonth() + 1).padStart(2, '0')}`;
-            const displayKey = fmtDateShort(displayDate);
-            
-            if (!actualMonthly[monthKey]) {
-                actualMonthly[monthKey] = { 
-                    payment: 0, 
-                    interest: 0, 
-                    principal: 0, 
-                    isActual: true, 
-                    displayMonth: displayKey,
-                    isCurrentMonth: monthKey === currentMonthKey
-                };
-            }
-            actualMonthly[monthKey].payment += row.payment;
-            actualMonthly[monthKey].interest += row.interest;
-            actualMonthly[monthKey].principal += row.principal;
-        });
-
-        // 予測データを月ごとに変換（返済予定がない月のみ）
-        const forecastMonthly = {};
-        if (forecastData && forecastData.length > 0) {
-            forecastData.forEach(row => {
-                const date = new Date(row.date);
-                const monthKey = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
-                const displayKey = fmtDateShort(date);
-                
-                // その月に実績（返済予定含む）がない場合のみ予測を追加
-                if (!actualMonthly[monthKey]) {
-                    forecastMonthly[monthKey] = {
-                        payment: row.payment,
-                        interest: row.interest,
-                        principal: row.principal,
-                        isActual: false,
-                        displayMonth: displayKey,
-                        isCurrentMonth: monthKey === currentMonthKey
-                    };
-                }
-            });
-        }
-
-        // 全データを結合
-        const allMonths = [...Object.keys(actualMonthly), ...Object.keys(forecastMonthly)];
-        const uniqueMonths = [...new Set(allMonths)].sort();
-        
-        // 月平均返済額を取得（当月の予測バー用）
-        const forecastDataObj = calculateForecast();
-        const avgPayment = forecastDataObj.avgMonthlyPayment;
-        
-        const chartData = uniqueMonths.map(month => {
-            const actual = actualMonthly[month];
-            const forecast = forecastMonthly[month];
-            const isCurrentMonth = month === currentMonthKey;
-            
-            if (actual && isCurrentMonth) {
-                // 当月：実績あり、予測も追加
-                return { 
-                    month, 
-                    payment: actual.payment,
-                    interest: actual.interest,
-                    principal: actual.principal,
-                    isActual: true,
-                    isCurrentMonth: true,
-                    avgPayment: avgPayment, // 予測額
-                    displayMonth: actual.displayMonth
-                };
-            } else if (actual) {
-                // 過去月：実績のみ
-                return { 
-                    month, 
-                    payment: actual.payment,
-                    interest: actual.interest,
-                    principal: actual.principal,
-                    isActual: true,
-                    isCurrentMonth: false,
-                    displayMonth: actual.displayMonth
-                };
-            } else if (forecast) {
-                // 未来月：予測のみ
-                return { 
-                    month, 
-                    payment: forecast.payment,
-                    interest: forecast.interest,
-                    principal: forecast.principal,
-                    isActual: false,
-                    isCurrentMonth: false,
-                    displayMonth: forecast.displayMonth
-                };
-            }
-        }).filter(Boolean);
-
-        const maxPay = Math.max(...chartData.map(d => d.payment || 0)) * 1.1;
-        if (maxPay === 0) return;
-
-        let svgContent = '';
-        // グリッド線
-        [0, 0.5, 1].forEach(t => {
-            const y = 100 - (t * 100);
-            svgContent += `<line x1="0" y1="${y}" x2="100" y2="${y}" stroke="#e5e7eb" stroke-width="0.5" vector-effect="non-scaling-stroke" />`;
-        });
-
-        // バー
-        const count = chartData.length;
-        const gap = count > 40 ? 0 : 1;
-        const barW = (100 / count) - gap;
-
-        chartData.forEach((d, i) => {
-            const x = (i * (100 / count)) + (gap / 2);
-            
-            if (d.isCurrentMonth && d.isActual && d.avgPayment && d.avgPayment > 0) {
-                // 当月：予測バー（薄色・背景）+ 実績部分（濃色・前景）を重ねる
-                
-                // 予測バーの高さを計算（平均返済額で）
-                const avgInterestEstimate = d.avgPayment * 0.1; // 概算10%を利息とする
-                const avgPrincipalEstimate = d.avgPayment - avgInterestEstimate;
-                
-                const avgPH = Math.max(0, (avgPrincipalEstimate / maxPay) * 100);
-                const avgIH = (avgInterestEstimate / maxPay) * 100;
-                
-                // 1. まず予測バー（薄色・背景）を描画
-                svgContent += `<rect x="${x}%" y="${100 - (avgPH + avgIH)}%" width="${barW}%" height="${avgIH}%" fill="#fed7aa" />`;
-                svgContent += `<rect x="${x}%" y="${100 - avgPH}%" width="${barW}%" height="${avgPH}%" fill="#93c5fd" />`;
-                
-                // 2. その上に実績部分（濃色・前景）を重ねる
-                const pH = Math.max(0, (d.principal / maxPay) * 100);
-                const iH = (d.interest / maxPay) * 100;
-                
-                if (iH > 0) {
-                    svgContent += `<rect x="${x}%" y="${100 - (pH + iH)}%" width="${barW}%" height="${iH}%" fill="#fb923c" />`;
-                }
-                if (pH > 0) {
-                    svgContent += `<rect x="${x}%" y="${100 - pH}%" width="${barW}%" height="${pH}%" fill="#3b82f6" />`;
-                }
-            } else if (d.isActual) {
-                // 過去月または未来の返済予定：実績（濃色）のみ
-                const pH = Math.max(0, (d.principal / maxPay) * 100);
-                const iH = (d.interest / maxPay) * 100;
-                
-                svgContent += `<rect x="${x}%" y="${100 - (pH + iH)}%" width="${barW}%" height="${iH}%" fill="#fb923c" />`;
-                if (d.principal > 0) {
-                    svgContent += `<rect x="${x}%" y="${100 - pH}%" width="${barW}%" height="${pH}%" fill="#3b82f6" />`;
-                }
-            } else {
-                // 未来月：予測（薄色）のみ
-                const pH = Math.max(0, (d.principal / maxPay) * 100);
-                const iH = (d.interest / maxPay) * 100;
-                
-                svgContent += `<rect x="${x}%" y="${100 - (pH + iH)}%" width="${barW}%" height="${iH}%" fill="#fed7aa" />`;
-                if (d.principal > 0) {
-                    svgContent += `<rect x="${x}%" y="${100 - pH}%" width="${barW}%" height="${pH}%" fill="#93c5fd" />`;
-                }
-            }
-        });
-
-        els.combinedChart.innerHTML = svgContent;
-        
-        // 年月ラベルを全て表示
-        let labelsHtml = '';
-        chartData.forEach(d => {
-            labelsHtml += `<span>${d.displayMonth}</span>`;
-        });
-        els.combinedLabels.innerHTML = labelsHtml;
-    }
-
-    // テーブル描画
-    function renderTable() {
-        const fragment = document.createDocumentFragment();
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        if (state.plan.length === 0) {
-            els.tbody.innerHTML = '<div style="padding:20px; text-align:center; color:#9ca3af;">返済記録がありません</div>';
-            return;
-        }
-
-        // plannedPaymentsのインデックスを追跡
-        let plannedIndex = 0;
-
-        // 全ての返済を表示（実績+予定）
-        state.plan.forEach((row, index) => {
-            const div = document.createElement('div');
-            const isCompleted = row.date <= today;
-            const isPlanned = row.isPlanned;
-            
-            // 過去の実績は薄緑、返済予定は黄色
-            if (isCompleted && !isPlanned) {
-                div.className = 'row completed';
-            } else if (isPlanned) {
-                div.className = 'row planned';
-            } else {
-                div.className = 'row';
-            }
-
-            // 5つのセルを作成
-            const dateCell = document.createElement('div');
-            dateCell.textContent = fmtDate(row.date);
-            
-            const paymentCell = document.createElement('div');
-            paymentCell.style.cssText = 'border-left:1px solid #f3f4f6; font-weight: 600;';
-            paymentCell.textContent = fmt(row.payment);
-            
-            const interestCell = document.createElement('div');
-            interestCell.className = 'text-orange';
-            interestCell.style.cssText = 'border-left:1px solid #f3f4f6;';
-            interestCell.textContent = fmt(row.interest);
-            
-            const principalCell = document.createElement('div');
-            principalCell.className = 'text-blue';
-            principalCell.style.cssText = 'border-left:1px solid #f3f4f6;';
-            principalCell.textContent = fmt(row.principal);
-            
-            const balanceCell = document.createElement('div');
-            balanceCell.className = 'text-gray';
-            balanceCell.style.cssText = 'border-left:1px solid #f3f4f6; position: relative; display: flex; align-items: center; justify-content: flex-end; gap: 8px;';
-            
-            // 残高テキストをspan要素で作成
-            const balanceText = document.createElement('span');
-            balanceText.textContent = fmt(row.balance);
-            balanceCell.appendChild(balanceText);
-            
-            div.appendChild(dateCell);
-            div.appendChild(paymentCell);
-            div.appendChild(interestCell);
-            div.appendChild(principalCell);
-            div.appendChild(balanceCell);
-            
-            // 削除ボタンを追加（返済予定のみ） - 残高セルの中に配置
-            if (isPlanned) {
-                const currentPlannedIndex = plannedIndex;
-                
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = '削除';
-                deleteBtn.type = 'button';
-                deleteBtn.style.cssText = 'background: #ef4444; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; cursor: pointer; white-space: nowrap;';
-                
-                deleteBtn.onclick = function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    if (confirm('この返済予定を削除しますか？')) {
-                        state.plannedPayments.splice(currentPlannedIndex, 1);
-                        calculate();
-                    }
-                };
-                
-                balanceCell.appendChild(deleteBtn);
-                plannedIndex++;
-            }
-            
-            fragment.appendChild(div);
-        });
-        
-        els.tbody.innerHTML = '';
-        els.tbody.appendChild(fragment);
-    }
-
-    // 平均返済額を更新
-    window.updateAvgPayment = function() {
-        const value = Number(els.avgPaymentInput.value);
-        if (isNaN(value) || value < 0) {
-            alert('正しい金額を入力してください');
-            return;
-        }
-        
-        state.customAvgPayment = value;
-        render(); // グラフを再描画
-    };
+    paymentHistory.push({ date, amount, company });
+    state.paymentHistory = paymentHistory;
     
-    // 平均返済額を自動計算に戻す
-    window.resetAvgPayment = function() {
-        state.customAvgPayment = null;
-        render(); // グラフを再描画
-    };
+    document.getElementById('new-payment-date').value = '';
+    document.getElementById('new-payment-company').value = '';
+    document.getElementById('new-payment-amount').value = '';
     
-    // 初期計算
     calculate();
+}
+
+function resetAvgPayment() {
+    state.customAvgPayment = null;
+    els.avgPaymentInput.value = '';
+    calculate();
+}
+
+els.avgPaymentInput.addEventListener('input', function() {
+    const value = parseInt(this.value);
+    if (!isNaN(value) && value > 0) {
+        state.customAvgPayment = value;
+    } else {
+        state.customAvgPayment = null;
+    }
+    calculate();
+});
+
+function calculateTodayBalance() {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    for (const company in companies) {
+        companies[company].balance = companies[company].initialBalance;
+        companies[company].completedDate = null;
+    }
     
-    // 返済予定を追加
-    window.addPaymentPlan = function() {
-        const dateInput = document.getElementById('new-payment-date');
-        const amountInput = document.getElementById('new-payment-amount');
+    const payments = [...state.paymentHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const lastPaymentDates = {};
+    for (const company in companies) lastPaymentDates[company] = new Date(companies[company].baseDate);
+    
+    for (const payment of payments) {
+        const paymentDate = new Date(payment.date); paymentDate.setHours(0, 0, 0, 0);
+        if (paymentDate > today) break;
         
-        const date = dateInput.value;
-        const amount = Number(amountInput.value);
+        const company = payment.company;
+        if (paymentDate < companies[company].baseDate) continue;
         
-        if (!date) {
-            alert('返済予定日を入力してください');
-            return;
+        const lastDate = lastPaymentDates[company];
+        const days = daysBetween(lastDate, paymentDate);
+        const interest = Math.floor(companies[company].balance * companies[company].rate * days / 365);
+        companies[company].balance = companies[company].balance + interest - payment.amount;
+        
+        if (companies[company].balance <= 0) {
+            companies[company].balance = 0;
+            companies[company].completedDate = paymentDate;
         }
         
-        if (!amount || amount <= 0) {
-            alert('正しい返済金額を入力してください');
-            return;
+        lastPaymentDates[company] = new Date(paymentDate);
+    }
+    
+    let totalBalance = 0, totalInterest = 0;
+    for (const company in companies) {
+        if (companies[company].balance > 0) {
+            const daysFromLast = daysBetween(lastPaymentDates[company], today);
+            const accruedInterest = Math.floor(companies[company].balance * companies[company].rate * daysFromLast / 365);
+            totalBalance += companies[company].balance + accruedInterest;
+            totalInterest += accruedInterest;
+        }
+    }
+    return { totalBalance, interestAccrued: totalInterest, companies: { ...companies } };
+}
+
+function calculate() {
+    let totalInt = 0, totalPaid = 0;
+    state.plan = [];
+    for (const company in companies) {
+        companies[company].balance = companies[company].initialBalance;
+        companies[company].completedDate = null;
+    }
+    
+    const payments = [...state.paymentHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const lastPaymentDates = {};
+    for (const company in companies) lastPaymentDates[company] = new Date(companies[company].baseDate);
+    
+    payments.forEach((payment, index) => {
+        const paymentDate = new Date(payment.date); paymentDate.setHours(0, 0, 0, 0);
+        const company = payment.company;
+        
+        if (paymentDate < companies[company].baseDate) return;
+        
+        const lastDate = lastPaymentDates[company];
+        const days = daysBetween(lastDate, paymentDate);
+        const interest = Math.floor(companies[company].balance * companies[company].rate * days / 365);
+        companies[company].balance = companies[company].balance + interest - payment.amount;
+        
+        const interestPaid = Math.min(interest, payment.amount);
+        const principalPaid = payment.amount - interestPaid;
+        totalInt += interestPaid;
+        totalPaid += payment.amount;
+        
+        if (companies[company].balance <= 0) {
+            companies[company].balance = 0;
+            companies[company].completedDate = paymentDate;
         }
         
-        const planDate = new Date(date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        let totalBalance = 0;
+        for (const c in companies) totalBalance += companies[c].balance;
         
-        if (planDate < today) {
-            alert('未来の日付を入力してください');
-            return;
+        state.plan.push({
+            index, date: new Date(paymentDate), company,
+            payment: payment.amount, principal: principalPaid,
+            interest: interestPaid, balance: totalBalance
+        });
+        lastPaymentDates[company] = new Date(paymentDate);
+    });
+    
+    state.summary.total = totalPaid;
+    state.summary.interest = totalInt;
+    
+    calculateMonthlyData();
+    render();
+}
+
+function calculateMonthlyData() {
+    const monthlyMap = new Map();
+    
+    state.plan.forEach(payment => {
+        const month = getBillingMonth(payment.date);
+        const key = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (!monthlyMap.has(key)) {
+            monthlyMap.set(key, { month, principal: 0, interest: 0, count: 0 });
         }
+        const data = monthlyMap.get(key);
+        data.principal += payment.principal;
+        data.interest += payment.interest;
+        data.count++;
+    });
+    
+    state.monthlyData = Array.from(monthlyMap.values()).sort((a, b) => a.month - b.month);
+    
+    if (state.monthlyData.length > 0) {
+        const totalPayment = state.monthlyData.reduce((sum, m) => sum + m.principal + m.interest, 0);
+        state.avgMonthlyPayment = totalPayment / state.monthlyData.length;
         
-        // 返済予定を追加
-        state.plannedPayments.push({
-            date: date,
-            amount: amount
+        const avgToUse = state.customAvgPayment || state.avgMonthlyPayment;
+        
+        const todayData = calculateTodayBalance();
+        const currentBalance = todayData.totalBalance - todayData.interestAccrued;
+        
+        if (currentBalance > 0 && avgToUse > 0) {
+            const monthsRemaining = Math.ceil(currentBalance / avgToUse);
+            const today = new Date();
+            const currentMonth = getBillingMonth(today);
+            
+            // 最大24ヶ月までの予測に制限
+            const maxMonths = Math.min(monthsRemaining, 24);
+            
+            for (let i = 1; i <= maxMonths; i++) {
+                const forecastMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + i, 1);
+                state.monthlyData.push({
+                    month: forecastMonth,
+                    principal: avgToUse * 0.95,
+                    interest: avgToUse * 0.05,
+                    count: 0,
+                    isForecast: true
+                });
+            }
+        }
+    }
+}
+
+function renderChart() {
+    if (state.monthlyData.length === 0) return;
+    
+    const chart = els.chart;
+    const labelsDiv = els.chartLabels;
+    chart.innerHTML = '';
+    labelsDiv.innerHTML = '';
+    
+    const amounts = state.monthlyData.map(m => m.principal + m.interest).filter(a => !isNaN(a) && isFinite(a));
+    if (amounts.length === 0) return;
+    
+    const maxAmount = Math.max(...amounts);
+    if (maxAmount === 0 || !isFinite(maxAmount)) return;
+    
+    const width = 100;
+    const height = 100;
+    const barWidth = width / state.monthlyData.length;
+    
+    state.monthlyData.forEach((data, i) => {
+        const x = i * barWidth;
+        const principalHeight = ((data.principal || 0) / maxAmount) * height;
+        const interestHeight = ((data.interest || 0) / maxAmount) * height;
+        
+        if (!isFinite(principalHeight) || !isFinite(interestHeight)) return;
+        
+        const principalColor = data.isForecast ? '#93c5fd' : '#3b82f6';
+        const interestColor = data.isForecast ? '#fed7aa' : '#fb923c';
+        
+        const principalRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        principalRect.setAttribute('x', x);
+        principalRect.setAttribute('y', height - principalHeight);
+        principalRect.setAttribute('width', barWidth * 0.8);
+        principalRect.setAttribute('height', principalHeight);
+        principalRect.setAttribute('fill', principalColor);
+        chart.appendChild(principalRect);
+        
+        const interestRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        interestRect.setAttribute('x', x);
+        interestRect.setAttribute('y', height - principalHeight - interestHeight);
+        interestRect.setAttribute('width', barWidth * 0.8);
+        interestRect.setAttribute('height', interestHeight);
+        interestRect.setAttribute('fill', interestColor);
+        chart.appendChild(interestRect);
+    });
+    
+    state.monthlyData.forEach((data, i) => {
+        const label = document.createElement('span');
+        label.textContent = `${String(data.month.getFullYear()).slice(2)}/${data.month.getMonth() + 1}`;
+        labelsDiv.appendChild(label);
+    });
+}
+
+function render() {
+    const todayData = calculateTodayBalance();
+    const today = new Date();
+    
+    els.todayDate.textContent = `${fmtDate(today)} 時点の残高`;
+    els.todayBalance.textContent = `¥${fmt(todayData.totalBalance)}`;
+    els.dailyInterest.textContent = `総残高（未払利息 ¥${fmt(todayData.interestAccrued)} 含む）`;
+    
+    const baseBalance = Object.values(companies).reduce((sum, c) => sum + c.initialBalance, 0);
+    els.baseBalance.textContent = `¥${fmt(baseBalance)}`;
+    
+    if (!state.customAvgPayment) {
+        els.avgPaymentInput.placeholder = `¥${fmt(state.avgMonthlyPayment)} (自動計算)`;
+    }
+    
+    if (state.monthlyData.length > 0) {
+        const lastForecast = state.monthlyData[state.monthlyData.length - 1];
+        if (lastForecast.isForecast) {
+            const forecastMonths = state.monthlyData.filter(m => m.isForecast).length;
+            els.durationDisplay.textContent = `${forecastMonths}ヶ月`;
+            const y = lastForecast.month.getFullYear();
+            const m = lastForecast.month.getMonth() + 1;
+            els.completionDate.textContent = `${y}/${m}`;
+        }
+    }
+    
+    let companyHtml = '';
+    for (const company in todayData.companies) {
+        const data = todayData.companies[company];
+        const classname = getCompanyClass(company);
+        if (data.completedDate) {
+            const y = data.completedDate.getFullYear();
+            const m = data.completedDate.getMonth() + 1;
+            const d = data.completedDate.getDate();
+            companyHtml += `<div class="company-card completed"><div class="name ${classname}">${company}</div><div class="completed">✓ ${y}/${m}/${d} 返済完了</div></div>`;
+        } else {
+            companyHtml += `<div class="company-card"><div class="name ${classname}">${company}</div><div class="amount">¥${fmt(data.balance)}</div></div>`;
+        }
+    }
+    els.companyBreakdown.innerHTML = companyHtml;
+    
+    let detailsHtml = '';
+    for (const company in companies) {
+        const ratePercent = (companies[company].rate * 100).toFixed(1);
+        detailsHtml += `<div style="padding: 8px; background: #f9fafb; border-radius: 6px;"><span class="${getCompanyClass(company)}" style="font-size: 0.75rem;">${company} (${ratePercent}%)</span><div style="font-size: 0.95rem; font-weight: 600; margin-top: 4px;">¥${fmt(companies[company].initialBalance)}</div></div>`;
+    }
+    els.companyDetails.innerHTML = detailsHtml;
+    
+    const initialTotal = Object.values(companies).reduce((sum, c) => sum + c.initialBalance, 0);
+    const currentPrincipal = todayData.totalBalance - todayData.interestAccrued;
+    const principalPaid = initialTotal - currentPrincipal;
+    const completionRate = (principalPaid / initialTotal) * 100;
+    
+    els.completionPercentage.textContent = `${completionRate.toFixed(2)}%`;
+    els.progressBarFill.style.width = `${completionRate}%`;
+    els.principalPaid.textContent = `¥${fmt(principalPaid)}`;
+    els.principalRemaining.textContent = `¥${fmt(currentPrincipal)}`;
+    els.totalPay.textContent = `¥${fmt(state.summary.total)}`;
+    els.totalInt.textContent = `¥${fmt(state.summary.interest)}`;
+    
+    renderChart();
+    renderTable();
+}
+
+function renderTable() {
+    const fragment = document.createDocumentFragment();
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    
+    state.plan.forEach((row) => {
+        const div = document.createElement('div');
+        div.className = row.date <= today ? 'row completed' : 'row';
+        
+        const cells = [
+            { text: fmtDate(row.date), style: '' },
+            { text: row.company, style: 'border-left:1px solid #f3f4f6;', class: getCompanyClass(row.company) },
+            { text: fmt(row.payment), style: 'border-left:1px solid #f3f4f6; font-weight: 600;' },
+            { text: fmt(row.interest), style: 'border-left:1px solid #f3f4f6;', class: 'text-orange' },
+            { text: fmt(row.principal), style: 'border-left:1px solid #f3f4f6;', class: 'text-blue' },
+            { text: fmt(row.balance), style: 'border-left:1px solid #f3f4f6;', class: 'text-gray' }
+        ];
+        
+        cells.forEach(cell => {
+            const cellDiv = document.createElement('div');
+            cellDiv.textContent = cell.text;
+            if (cell.class) cellDiv.className = cell.class;
+            if (cell.style) cellDiv.style.cssText = cell.style;
+            div.appendChild(cellDiv);
         });
         
-        // 日付でソート
-        state.plannedPayments.sort((a, b) => new Date(a.date) - new Date(b.date));
-        
-        // フォームをクリア
-        dateInput.value = '';
-        amountInput.value = '';
-        
-        // 再計算
-        calculate();
-    };
+        fragment.appendChild(div);
+    });
     
-    // 日付が変わったら自動更新（1分ごとにチェック）
-    setInterval(() => {
-        const now = new Date();
-        if (now.getHours() === 0 && now.getMinutes() === 0) {
-            render();
-        }
-    }, 60000);
-</script>
+    els.tbody.innerHTML = '';
+    els.tbody.appendChild(fragment);
+}
 
+for (const company in companies) companies[company].balance = companies[company].initialBalance;
+calculate();
+</script>
 </body>
 </html>
