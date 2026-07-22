@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>親援助返済シミュレーター - 無利子返済モデル</title>
+<title>ご両親への返済シミュレーター - 無利子返済モデル</title>
 <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
@@ -205,8 +205,8 @@
             <svg class="w-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </div>
         <div>
-            <h1 style="font-size: 1.25rem; font-weight: bold;">親援助 返済シミュレーター</h1>
-            <p style="font-size: 0.75rem; color: #6b7280;">ご両親への返済 - 無利子（0%）</p>
+            <h1 style="font-size: 1.25rem; font-weight: bold;">ご両親への返済シミュレーター</h1>
+            <p style="font-size: 0.75rem; color: #6b7280;">両親への返済 - 無利子（0%）</p>
         </div>
     </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -259,15 +259,15 @@
 <div class="card">
     <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #f3f4f6; padding-bottom: 8px;">
         <svg class="w-icon text-green" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        援助情報
+        借入情報
     </h2>
     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 12px; background: #f9fafb; border-radius: 8px;">
         <div>
-            <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">援助総額</p>
+            <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">借入総額</p>
             <p id="borrow-total" style="font-size: 1rem; font-weight: 600;">¥--</p>
         </div>
         <div>
-            <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">援助内容</p>
+            <p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">内訳</p>
             <p style="font-size: 1rem; font-weight: 600;">毎月¥70,000 × 7ヶ月</p>
         </div>
         <div>
@@ -280,7 +280,7 @@
         </div>
     </div>
     <div class="info-box">
-        💡 <strong>無利子:</strong> ご両親からの援助のため利子は発生しません。返済額はそのまま元金の返済に充当されます。
+        💡 <strong>無利子:</strong> ご両親からの借入のため利子は発生しません。返済額はそのまま元金の返済に充当されます。
     </div>
     <div style="display: flex; justify-content: space-between; margin-top: 16px; padding-top: 12px; border-top: 1px solid #f3f4f6;">
         <div>
@@ -352,8 +352,8 @@
 
 <script>
 // =============================================================
-// 親援助の返済（無利子）
-// 援助総額 490,000円 = 毎月70,000円 × 7ヶ月
+// ご両親への返済（無利子）
+// 借入総額 490,000円 = 毎月70,000円 × 7ヶ月
 // 利子なし → 返済額はそのまま元金に充当
 // 返済開始（予測の起点）: 2026年8月
 // =============================================================
